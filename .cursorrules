@@ -1,0 +1,10 @@
+# Configuración de Cursor para el proyecto
+
+## Configuración MCP
+Este proyecto está configurado con Model Context Protocol (MCP) para GitHub.
+
+## Reglas del proyecto
+- Proyecto React + TypeScript con Vite
+- Usar Tailwind CSS para estilos
+- Mantener estructura de componentes organizada
+- Seguir convenciones de naming en español
