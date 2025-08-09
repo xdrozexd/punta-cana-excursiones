@@ -78,7 +78,7 @@ export const Booking: React.FC = () => {
         {/* Progress Steps */}
         <div className="mb-12">
           <div className="flex items-center justify-center space-x-2 md:space-x-4 mb-6 px-2">
-            {steps.map((step, index) => (
+            {steps.map((_, index) => (
               <div key={index} className="flex items-center flex-1">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold shadow-md transition-all duration-300 ${
                   currentStep > index + 1 

@@ -11,7 +11,6 @@ import {
   Save,
   Eye,
   EyeOff,
-  Star,
   Trash2
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -59,8 +58,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
     handleSubmit,
     formState: { errors },
     setValue,
-    watch,
-    reset
+    watch
   } = useForm<ActivityFormData>({
     resolver: zodResolver(activitySchema),
     defaultValues: {

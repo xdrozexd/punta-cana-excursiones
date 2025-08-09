@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, X, Trash2, Check } from 'lucide-react';
+import { AlertTriangle, Trash2, Check } from 'lucide-react';
 
 interface ConfirmDialogProps {
   title: string;

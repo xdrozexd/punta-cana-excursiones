@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   ArrowRight, 
   Star, 
   Users, 
   Award, 
-  Calendar, 
   MapPin, 
   ChevronRight,
-  Clock,
   CheckCircle,
   Heart
 } from 'lucide-react';

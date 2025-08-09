@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, TrendingUp, DollarSign, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, DollarSign } from 'lucide-react';
 
 export const PerformanceChart: React.FC = () => {
   const [timeRange, setTimeRange] = useState('7days');
