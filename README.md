@@ -105,6 +105,8 @@ src/
 
 🔗 **[Ver Demo](https://punta-cana-excursiones.vercel.app)**
 
+> ⚡ **Última actualización**: Build optimizado sin errores TypeScript
+
 ## 📸 Screenshots
 
 ### Página Principal
