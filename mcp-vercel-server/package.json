@@ -1,0 +1,22 @@
+{
+  "name": "mcp-vercel-server",
+  "version": "1.0.0",
+  "description": "MCP Server para gestionar proyectos y despliegues de Vercel",
+  "main": "index.js",
+  "bin": {
+    "mcp-vercel-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["mcp", "vercel", "deployment", "model-context-protocol"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "axios": "^1.11.0",
+    "zod": "^3.25.76"
+  }
+}

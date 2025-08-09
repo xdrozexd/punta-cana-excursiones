@@ -6,8 +6,7 @@ import {
   Award, 
   MapPin, 
   ChevronRight,
-  CheckCircle,
-  Heart
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '../components/ui';
 import { TourCard } from '../components/ui/TourCard';

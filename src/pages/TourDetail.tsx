@@ -4,7 +4,7 @@ import { Star, Clock, Users, MapPin, Calendar, CheckCircle, XCircle } from 'luci
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 
 export const TourDetail: React.FC = () => {
-  const { id } = useParams();
+  const { } = useParams();
 
   // Mock data - en una aplicación real, esto vendría de una API
   const tour = {

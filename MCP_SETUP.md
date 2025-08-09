@@ -2,7 +2,7 @@
 
 ## ✅ Estado Actual
 - **Archivo de configuración**: `C:\Users\blackwork\.cursor\mcp.json`
-- **Servidores configurados**: 3 servidores MCP funcionando
+- **Servidores configurados**: 4 servidores MCP funcionando
 - **Estado**: ✅ Funcional y listo para usar
 
 ## 🛠️ Servidores MCP Configurados
@@ -31,6 +31,15 @@
   - Mantener contexto entre sesiones
   - Notas y documentación automática
 
+### 4. **Vercel Server** 🚀
+- **Función**: Gestión de proyectos y despliegues de Vercel
+- **Capacidades**:
+  - Listar todos los proyectos de Vercel
+  - Ver despliegues por proyecto
+  - Obtener información detallada de proyectos
+  - Orientación para crear nuevos despliegues
+- **Configuración requerida**: Token de Vercel (ver README en mcp-vercel-server/)
+
 ## 🔧 Siguiente Paso CRÍTICO
 
 ### ⚠️ DEBES REINICIAR CURSOR COMPLETAMENTE
@@ -53,6 +62,8 @@ Después de reiniciar Cursor:
    - ✅ `filesystem` - Estado: Conectado
    - ✅ `brave_search` - Estado: Conectado  
    - ✅ `memory` - Estado: Conectado
+   - ✅ `github` - Estado: Conectado
+   - ⚠️ `vercel` - Estado: Requiere configuración del token
 
 3. **Si alguno muestra error**:
    - Es normal al principio
@@ -76,7 +87,30 @@ Una vez configurado, tendrás acceso a:
 - 📂 **Exploración avanzada de archivos**
 - 🔍 **Búsquedas web en tiempo real**
 - 🧠 **Memoria persistente de proyectos**
+- 🐙 **Gestión completa de GitHub**
+- 🚀 **Control de proyectos y despliegues de Vercel**
 - 🤖 **Asistencia mejorada con contexto del proyecto**
+
+## ⚙️ Configuración Adicional para Vercel
+
+### Para usar el servidor de Vercel:
+
+1. **Obtén tu token de Vercel**:
+   - Ve a [Vercel Dashboard → Tokens](https://vercel.com/account/tokens)
+   - Crea un nuevo token
+   - Copia el token generado
+
+2. **Actualiza la configuración**:
+   - Edita `C:\Users\blackwork\.cursor\mcp.json`
+   - En la sección "vercel" → "env" → "VERCEL_TOKEN"
+   - Pega tu token de Vercel
+
+3. **Reinicia Cursor** para aplicar los cambios
+
+4. **Funcionalidades disponibles**:
+   - `"Muéstrame mis proyectos de Vercel"`
+   - `"¿Cuáles son los últimos despliegues?"`
+   - `"Dame información del proyecto ABC123"`
 
 ---
 

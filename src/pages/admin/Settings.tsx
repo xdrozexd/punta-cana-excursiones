@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Settings as SettingsIcon, 
   User, 
-  Mail, 
   Lock, 
   Bell, 
   Globe, 

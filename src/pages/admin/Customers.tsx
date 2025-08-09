@@ -142,24 +142,6 @@ const Customers: React.FC = () => {
     }
     
     // En una aplicación real, aquí se enviaría la información al servidor
-    // Simulamos la creación de un nuevo cliente
-    const newId = `CUS-00${customers.length + 1}`;
-    const today = new Date().toISOString().split('T')[0];
-    
-    const createdCustomer: Customer = {
-      id: newId,
-      name: newCustomer.name,
-      email: newCustomer.email,
-      phone: newCustomer.phone,
-      country: newCustomer.country,
-      bookingsCount: 0,
-      totalSpent: 0,
-      lastBooking: today,
-      status: 'active',
-      createdAt: today
-    };
-    
-    // En una aplicación real, aquí actualizaríamos el estado con los datos del servidor
     // Para esta demo, simplemente mostramos un mensaje de éxito
     alert(`Cliente ${newCustomer.name} creado con éxito`);
     
