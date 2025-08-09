@@ -1,0 +1,266 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+  }
+  
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+  
+  /* Heading styles */
+  .heading-primary {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold;
+  }
+  
+  .heading-secondary {
+    @apply text-3xl md:text-4xl font-bold;
+  }
+  
+  .heading-tertiary {
+    @apply text-2xl md:text-3xl font-bold;
+  }
+  
+  /* Container styles */
+  .container-custom {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer components {
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Form elements - Modern style */
+  .form-label {
+    @apply block text-gray-700 font-medium mb-1 text-sm;
+  }
+  
+  .form-input {
+    @apply w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition duration-200 ease-in-out shadow-sm;
+  }
+  
+  /* Select with custom arrow */
+  select.form-input {
+    @apply appearance-none bg-no-repeat bg-right pr-10;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+  }
+  
+  /* Checkbox and radio custom style */
+  input[type="checkbox"], input[type="radio"] {
+    @apply rounded border-gray-300 text-sky-600 shadow-sm focus:border-sky-300 focus:ring focus:ring-sky-200 focus:ring-opacity-50 focus:ring-offset-0;
+  }
+
+  /* Custom scrollbars */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Button variants - Enhanced */
+  .btn-primary {
+    @apply bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-900 px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center;
+  }
+  
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent border-2 border-sky-600 text-sky-600 hover:bg-sky-50 px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 flex items-center justify-center;
+  }
+  
+  /* Button sizes */
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+  
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl shadow-lg border border-gray-100 transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply card hover:shadow-xl transform hover:-translate-y-1;
+  }
+
+  /* Gradient backgrounds */
+  .bg-caribbean-gradient {
+    background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  }
+  
+  .bg-sunset-gradient {
+    background: linear-gradient(135deg, #f97316 0%, #fbbf24 100%);
+  }
+  
+  /* Modern glass effect */
+  .glass-effect {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-lg;
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+button, 
+a, 
+input, 
+select, 
+textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom selection colors */
+::selection {
+  background-color: rgba(20, 184, 166, 0.2);
+  color: rgb(15, 118, 110);
+}
+
+/* Loading spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #14b8a6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.8s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.8s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.8s ease-out forwards;
+}
+
+.animate-bounce-subtle {
+  animation: bounceSlight 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Staggered animations for children */
+.stagger-animation > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-animation > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
+.stagger-animation > *:nth-child(6) { animation-delay: 0.6s; }
+
+/* Keyframes */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bounceSlight {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
