@@ -15,6 +15,8 @@ export interface Activity {
   category: string;
   rating: number;
   reviews: number;
+  originalPrice?: number;
+  excluded?: string[];
   
   // Campos adicionales para compatibilidad con el frontend existente
   title?: string;
@@ -40,12 +42,12 @@ export interface Activity {
 }
 
 export type ActivityCategory = 
-  | 'tour'
+  | 'tours-islas'
   | 'aventura'
-  | 'acuatico'
+  | 'acuaticos'
   | 'cultural'
   | 'gastronomia'
-  | 'fiesta'
+  | 'nocturna'
   | 'relax';
 
 export interface CreateActivityData {

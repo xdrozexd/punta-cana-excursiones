@@ -1,0 +1,5 @@
+[33m90d5f43[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m trigger: Forzar nuevo build en Vercel
+[33m57a98cb[m fix: Completar corrección de errores TypeScript para Vercel
+[33m9e9683a[m fix: eliminar importaciones y variables no utilizadas para corregir errores de TypeScript en el despliegue
+[33m645408d[m fix: Simplificar vercel.json para evitar errores de regex
+[33mbb35474[m fix: Corregir configuración de vercel.json

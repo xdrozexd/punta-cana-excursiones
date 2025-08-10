@@ -15,8 +15,8 @@ import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
 import { useData } from '../contexts/DataContext';
 
-// Datos de ejemplo para tours destacados
-const featuredTours = [
+// Datos de ejemplo para tours destacados (no se usa, se obtienen de la API)
+const _featuredTours = [
   {
     id: '1',
     title: 'Isla Saona - Tour Completo',

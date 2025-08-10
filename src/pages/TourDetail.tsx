@@ -279,7 +279,7 @@ export const TourDetail: React.FC = () => {
               </div>
               <div className="p-6">
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {tour.highlights.map((highlight, index) => (
+                  {tour.highlights.map((highlight: string, index: number) => (
                     <li key={index} className="flex items-start space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                       <span className="text-gray-700">{highlight}</span>
@@ -299,7 +299,7 @@ export const TourDetail: React.FC = () => {
               </div>
               <div className="p-6">
                 <div className="space-y-6">
-                  {tour.itinerary.map((item, index) => (
+                  {tour.itinerary.map((item: any, index: number) => (
                     <div key={index} className="flex space-x-4">
                       <div className="flex-shrink-0">
                         <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center border-2 border-indigo-200">
@@ -327,7 +327,7 @@ export const TourDetail: React.FC = () => {
                 </div>
                 <div className="p-6">
                   <ul className="space-y-3">
-                    {tour.included.map((item, index) => (
+                    {tour.included.map((item: string, index: number) => (
                       <li key={index} className="flex items-start space-x-3">
                         <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">{item}</span>
@@ -346,7 +346,7 @@ export const TourDetail: React.FC = () => {
                 </div>
                 <div className="p-6">
                   <ul className="space-y-3">
-                    {tour.excluded.map((item, index) => (
+                    {tour.excluded.map((item: string, index: number) => (
                       <li key={index} className="flex items-start space-x-3">
                         <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">{item}</span>
