@@ -29,7 +29,7 @@ export const TourDetail: React.FC = () => {
         
         // Si no está en el contexto, intentamos obtenerla directamente de la API
         if (!foundTour && id) {
-          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+          const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
           const response = await axios.get(`${API_URL}/activities/${id}`);
           foundTour = response.data;
         }

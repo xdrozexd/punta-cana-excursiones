@@ -135,11 +135,21 @@ const Activities = () => {
       
       if (editingActivity) {
         // Actualizar actividad existente
-        const updatedActivity = await updateActivity(editingActivity.id, adaptedData);
+        const updatedActivity = await updateActivity(editingActivity.id, {
+          ...adaptedData,
+          id: editingActivity.id,
+          createdAt: editingActivity.createdAt,
+          updatedAt: new Date().toISOString()
+        });
         toast.success(`Actividad "${updatedActivity.name}" actualizada correctamente`);
       } else {
         // Crear nueva actividad
-        const newActivity = await addActivity(adaptedData);
+        const newActivity = await addActivity({
+          ...adaptedData,
+          id: 'temp_' + Date.now(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
         toast.success(`Actividad "${newActivity.name}" creada correctamente`);
       }
       setShowForm(false);

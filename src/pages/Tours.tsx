@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Clock, Users, MapPin, Search, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { TourCard } from '../components/ui/TourCard';
 
