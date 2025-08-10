@@ -1,20 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Plus, 
   Search,
-  MapPin
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { ActivityForm } from '../../components/admin/ActivityForm';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { ActivityCard } from '../../components/admin/ActivityCard';
 import { useData } from '../../contexts/DataContext';
 import { Activity } from '../../types/activity';
-
-// La interfaz Activity ya está importada desde types/activity
+import toast from 'react-hot-toast';
 
 const Activities = () => {
-  const { activities, addActivity, updateActivity, deleteActivity, isLoading } = useData();
+  const { activities, addActivity, updateActivity, deleteActivity, isLoading, refreshData } = useData();
   const [showForm, setShowForm] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -22,15 +22,40 @@ const Activities = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
+  const [refreshing, setRefreshing] = useState(false);
 
   const categories = [
     { value: 'all', label: 'Todas las categorías' },
-    { value: 'tours-islas', label: 'Tours a Islas' },
+    { value: 'tour', label: 'Tours' },
     { value: 'aventura', label: 'Aventura' },
-    { value: 'acuaticos', label: 'Deportes Acuáticos' },
+    { value: 'acuatico', label: 'Deportes Acuáticos' },
     { value: 'cultural', label: 'Cultural' },
-    { value: 'gastronomia', label: 'Gastronomía' }
+    { value: 'gastronomia', label: 'Gastronomía' },
+    { value: 'fiesta', label: 'Fiesta' }
   ];
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      console.log('Iniciando actualización de datos...');
+      await refreshData();
+      console.log('Datos actualizados correctamente');
+      toast.success('Datos actualizados correctamente');
+    } catch (error) {
+      console.error('Error al refrescar datos:', error);
+      toast.error('Error al actualizar los datos');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
+  // Efecto para registrar cuando el componente se monta
+  useEffect(() => {
+    console.log('Componente Activities montado');
+    return () => {
+      console.log('Componente Activities desmontado');
+    };
+  }, []);
 
   const handleAddActivity = () => {
     setEditingActivity(null);
@@ -47,62 +72,99 @@ const Activities = () => {
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deletingActivity) {
-      deleteActivity(deletingActivity.id);
-      setShowDeleteDialog(false);
-      setDeletingActivity(null);
+      try {
+        await deleteActivity(deletingActivity.id);
+        toast.success(`Actividad "${deletingActivity.name}" eliminada correctamente`);
+        setShowDeleteDialog(false);
+        setDeletingActivity(null);
+      } catch (error) {
+        toast.error('Error al eliminar la actividad');
+        console.error('Error al eliminar actividad:', error);
+      }
     }
   };
 
-  const handleSaveActivity = (activityData: any) => {
-    if (editingActivity) {
-      // Actualizar actividad existente
-      const updatedActivity = { 
-        ...editingActivity, 
-        ...activityData,
-        maxGroupSize: activityData.maxPeople || editingActivity.maxGroupSize, // Compatibilidad
-        updatedAt: new Date().toISOString().split('T')[0] 
-      } as Activity;
+  const handleSaveActivity = async (activityData: any) => {
+    try {
+      // Convertir la duración a minutos para que coincida con el modelo de Prisma
+      let durationInMinutes = 60; // Valor predeterminado
+      const durationStr = activityData.duration.toString();
       
-      updateActivity(editingActivity.id, updatedActivity);
-    } else {
-      // Crear nueva actividad
-      const newActivity = {
-        ...activityData,
-        rating: 0,
-        reviewCount: 0,
-        maxGroupSize: activityData.maxPeople || 10, // Compatibilidad entre maxPeople y maxGroupSize
-        images: activityData.images || [],
-        included: activityData.included || [],
-        notIncluded: activityData.notIncluded || [],
-        requirements: activityData.requirements || [],
-        tags: activityData.tags || [],
+      if (durationStr.includes('hora')) {
+        // Convertir horas a minutos
+        const hours = parseInt(durationStr);
+        durationInMinutes = hours * 60;
+      } else if (durationStr.includes('día')) {
+        // Convertir días a minutos (asumiendo 8 horas por día)
+        if (durationStr.includes('completo')) {
+          durationInMinutes = 8 * 60; // Día completo = 8 horas
+        } else {
+          const days = parseInt(durationStr);
+          durationInMinutes = days * 8 * 60; // Días * 8 horas * 60 minutos
+        }
+      }
+      
+      // Adaptar datos para que coincidan con el modelo de Prisma
+      const adaptedData = {
+        name: activityData.title || activityData.name,
+        slug: (activityData.title || activityData.name)?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || '',
+        description: activityData.description,
+        price: Number(activityData.price),
+        duration: durationInMinutes,
+        location: activityData.location,
+        imageUrl: activityData.imageUrl || activityData.images?.[0] || 'https://via.placeholder.com/800x600?text=Sin+imagen',
         featured: activityData.featured || false,
         active: activityData.active !== undefined ? activityData.active : true,
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]
-      } as Activity;
+        capacity: Number(activityData.maxPeople) || Number(activityData.capacity) || 10,
+        category: activityData.category || 'tour',
+        rating: activityData.rating || 4.5,
+        reviews: activityData.reviews || activityData.reviewCount || 0,
+        // Campos adicionales para el frontend
+        shortDescription: activityData.shortDescription,
+        meetingPoint: activityData.meetingPoint,
+        included: activityData.included,
+        notIncluded: activityData.notIncluded,
+        requirements: activityData.requirements,
+        tags: activityData.tags,
+        images: activityData.images
+      };
       
-      addActivity(newActivity);
+      console.log('Datos adaptados para enviar a la API:', adaptedData);
+      
+      if (editingActivity) {
+        // Actualizar actividad existente
+        const updatedActivity = await updateActivity(editingActivity.id, adaptedData);
+        toast.success(`Actividad "${updatedActivity.name}" actualizada correctamente`);
+      } else {
+        // Crear nueva actividad
+        const newActivity = await addActivity(adaptedData);
+        toast.success(`Actividad "${newActivity.name}" creada correctamente`);
+      }
+      setShowForm(false);
+    } catch (error) {
+      toast.error('Error al guardar la actividad');
+      console.error('Error al guardar actividad:', error);
     }
-    setShowForm(false);
   };
 
   const filteredActivities = activities
     .filter(activity => {
-      const matchesSearch = activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           activity.location.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        (activity.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+        (activity.location?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+      
       const matchesCategory = filterCategory === 'all' || activity.category === filterCategory;
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'newest':
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
         case 'oldest':
-          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+          return new Date(a.createdAt || '').getTime() - new Date(b.createdAt || '').getTime();
         case 'price-high':
           return b.price - a.price;
         case 'price-low':
@@ -127,15 +189,27 @@ const Activities = () => {
               Administra todas las excursiones y actividades disponibles
             </p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleAddActivity}
-            className="bg-caribbean-600 hover:bg-caribbean-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors duration-200"
-          >
-            <Plus className="w-5 h-5" />
-            Nueva Actividad
-          </motion.button>
+          <div className="flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center gap-2 transition-colors duration-200 disabled:opacity-70"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Actualizando...' : 'Actualizar'}
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleAddActivity}
+              className="bg-caribbean-600 hover:bg-caribbean-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors duration-200"
+            >
+              <Plus className="w-5 h-5" />
+              Nueva Actividad
+            </motion.button>
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -256,7 +330,7 @@ const Activities = () => {
       {showDeleteDialog && deletingActivity && (
         <ConfirmDialog
           title="Eliminar Actividad"
-          message={`¿Estás seguro de que quieres eliminar "${deletingActivity.title}"? Esta acción no se puede deshacer.`}
+          message={`¿Estás seguro de que quieres eliminar "${deletingActivity.name}"? Esta acción no se puede deshacer.`}
           confirmLabel="Eliminar"
           cancelLabel="Cancelar"
           onConfirm={confirmDelete}

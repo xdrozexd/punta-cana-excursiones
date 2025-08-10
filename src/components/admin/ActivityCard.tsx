@@ -53,10 +53,9 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       {/* Image */}
       <div className="relative h-48 overflow-hidden">
         <ImageWithFallback
-          src={activity.images[0] || ''}
+          src={activity.images?.[0] || activity.imageUrl || ''}
           fallbackSrc={`https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?w=800`}
-
-          alt={activity.title}
+          alt={activity.title || activity.name || ''}
           className="w-full h-full object-cover"
         />
         
@@ -117,7 +116,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 
         {/* Title */}
         <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-          {activity.title}
+          {activity.title || activity.name}
         </h3>
 
         {/* Description */}
@@ -141,7 +140,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Star className="w-4 h-4 text-yellow-400" />
-            <span>{activity.rating.toFixed(1)} ({activity.reviewCount})</span>
+            <span>{activity.rating.toFixed(1)} ({activity.reviewCount || activity.reviews || 0})</span>
           </div>
         </div>
 

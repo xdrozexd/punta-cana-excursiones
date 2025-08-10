@@ -13,6 +13,7 @@ import { TourCard } from '../components/ui/TourCard';
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
+import { useData } from '../contexts/DataContext';
 
 // Datos de ejemplo para tours destacados
 const featuredTours = [
@@ -122,6 +123,7 @@ const testimonials = [
 
 // Componente principal
 export const Home: React.FC = () => {
+  const { activities, isLoading } = useData();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   
   // Referencias para animaciones basadas en scroll
@@ -331,15 +333,33 @@ export const Home: React.FC = () => {
             variants={staggerContainer}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
-            {featuredTours.map((tour, index) => (
-              <motion.div 
-                key={tour.id}
-                variants={fadeInUp}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <TourCard tour={tour} />
-              </motion.div>
-            ))}
+            {isLoading ? (
+              <div className="col-span-full flex justify-center py-12">
+                <div className="flex flex-col items-center">
+                  <div className="w-12 h-12 border-4 border-caribbean-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-gray-600">Cargando actividades...</p>
+                </div>
+              </div>
+            ) : (
+              activities
+                .filter(activity => activity.featured)
+                .slice(0, 4)
+                .map((tour, index) => (
+                  <motion.div 
+                    key={tour.id}
+                    variants={fadeInUp}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <TourCard tour={tour} />
+                  </motion.div>
+                ))
+            )}
+            
+            {!isLoading && activities.filter(activity => activity.featured).length === 0 && (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-500 text-lg">No hay actividades destacadas disponibles en este momento.</p>
+              </div>
+            )}
           </motion.div>
 
           <motion.div 

@@ -1,32 +1,38 @@
 export interface Activity {
   id: string;
-  title: string;
+  name: string;
+  slug: string;
   description: string;
-  shortDescription?: string;
   price: number;
-  duration: string;
+  duration: number;
+  location: string;
+  imageUrl: string;
+  featured: boolean;
+  active: boolean;
+  capacity: number;
+  createdAt: string;
+  updatedAt: string;
+  category: string;
+  rating: number;
+  reviews: number;
+  
+  // Campos adicionales para compatibilidad con el frontend existente
+  title?: string;
+  shortDescription?: string;
   maxPeople?: number;
   maxGroupSize?: number;
-  location: string;
   meetingPoint?: string;
-  category: ActivityCategory;
-  rating: number;
-  reviewCount: number;
-  imageUrl?: string;
-  images: string[];
-  included: string[];
+  reviewCount?: number;
+  images?: string[];
+  included?: string[];
   notIncluded?: string[];
   requirements?: string[];
   tags?: string[];
-  featured: boolean;
-  active?: boolean;
   availability?: string[];
   startTime?: string[];
   highlights?: string[];
   itinerary?: ItineraryItem[];
   faqs?: FAQ[];
-  createdAt?: string;
-  updatedAt?: string;
   minAge?: number;
   languages?: string[];
   pickupIncluded?: boolean;
@@ -34,31 +40,26 @@ export interface Activity {
 }
 
 export type ActivityCategory = 
-  | 'tours-islas'
+  | 'tour'
   | 'aventura'
-  | 'acuaticos'
+  | 'acuatico'
   | 'cultural'
   | 'gastronomia'
-  | 'relax'
-  | 'nocturna';
+  | 'fiesta'
+  | 'relax';
 
 export interface CreateActivityData {
-  title: string;
+  name: string;
+  slug: string;
   description: string;
-  shortDescription: string;
   price: number;
-  duration: string;
-  maxPeople: number;
+  duration: number;
   location: string;
-  meetingPoint: string;
-  category: ActivityCategory;
-  included: string[];
-  notIncluded: string[];
-  requirements: string[];
-  tags: string[];
-  featured: boolean;
-  active: boolean;
-  images: string[];
+  imageUrl: string;
+  featured?: boolean;
+  active?: boolean;
+  capacity?: number;
+  category?: string;
 }
 
 export interface UpdateActivityData extends Partial<CreateActivityData> {
@@ -67,7 +68,7 @@ export interface UpdateActivityData extends Partial<CreateActivityData> {
 
 export interface ActivityFilters {
   search?: string;
-  category?: ActivityCategory | 'all';
+  category?: string | 'all';
   featured?: boolean;
   active?: boolean;
   sortBy?: 'newest' | 'oldest' | 'price-high' | 'price-low' | 'rating';

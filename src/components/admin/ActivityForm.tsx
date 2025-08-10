@@ -13,37 +13,23 @@ import {
   EyeOff,
   Trash2
 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 
-const activitySchema = z.object({
-  title: z.string().min(5, 'El título debe tener al menos 5 caracteres'),
-  description: z.string().min(20, 'La descripción debe tener al menos 20 caracteres'),
-  shortDescription: z.string().min(10, 'La descripción corta debe tener al menos 10 caracteres').max(150, 'Máximo 150 caracteres'),
-  price: z.number().min(1, 'El precio debe ser mayor a 0'),
-  duration: z.string().min(1, 'La duración es requerida'),
-  maxPeople: z.number().min(1, 'Debe permitir al menos 1 persona'),
-  location: z.string().min(1, 'La ubicación es requerida'),
-  category: z.string().min(1, 'La categoría es requerida'),
-  meetingPoint: z.string().min(1, 'El punto de encuentro es requerido'),
-  included: z.array(z.string()).min(1, 'Debe incluir al menos un elemento'),
-  notIncluded: z.array(z.string()),
-  requirements: z.array(z.string()),
-  featured: z.boolean(),
-  active: z.boolean(),
-  tags: z.array(z.string()),
-});
-
-type ActivityFormData = z.infer<typeof activitySchema>;
-
-interface ActivityFormProps {
-  activity?: any;
-  onSave: (data: any) => void;
-  onClose: () => void;
-}
-
-export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }) => {
+// Eliminamos la validación con zod que está causando problemas
+const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }) => {
+  const [formData, setFormData] = useState({
+    title: activity?.title || activity?.name || '',
+    description: activity?.description || '',
+    shortDescription: activity?.shortDescription || '',
+    price: activity?.price || 0,
+    duration: activity?.duration || '',
+    maxPeople: activity?.maxPeople || activity?.capacity || 10,
+    location: activity?.location || '',
+    category: activity?.category || '',
+    meetingPoint: activity?.meetingPoint || '',
+    featured: activity?.featured || false,
+    active: activity?.active !== undefined ? activity.active : true,
+  });
+  
   const [images, setImages] = useState<string[]>(activity?.images || []);
   const [dragOver, setDragOver] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -52,33 +38,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
   const [requirements, setRequirements] = useState<string[]>(activity?.requirements || ['']);
   const [tags, setTags] = useState<string[]>(activity?.tags || []);
   const [newTag, setNewTag] = useState('');
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch
-  } = useForm<ActivityFormData>({
-    resolver: zodResolver(activitySchema),
-    defaultValues: {
-      title: activity?.title || '',
-      description: activity?.description || '',
-      shortDescription: activity?.shortDescription || '',
-      price: activity?.price || 0,
-      duration: activity?.duration || '',
-      maxPeople: activity?.maxPeople || 1,
-      location: activity?.location || '',
-      category: activity?.category || '',
-      meetingPoint: activity?.meetingPoint || '',
-      included: activity?.included || [''],
-      notIncluded: activity?.notIncluded || [],
-      requirements: activity?.requirements || [],
-      featured: activity?.featured || false,
-      active: activity?.active !== undefined ? activity.active : true,
-      tags: activity?.tags || [],
-    }
-  });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   const categories = [
     { value: 'tours-islas', label: 'Tours a Islas' },
@@ -99,13 +59,6 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
     '2 días',
     '3 días'
   ];
-
-  useEffect(() => {
-    setValue('included', includedItems.filter(item => item.trim() !== ''));
-    setValue('notIncluded', notIncludedItems.filter(item => item.trim() !== ''));
-    setValue('requirements', requirements.filter(item => item.trim() !== ''));
-    setValue('tags', tags);
-  }, [includedItems, notIncludedItems, requirements, tags, setValue]);
 
   const handleImageUpload = (files: FileList | null) => {
     if (files) {
@@ -201,65 +154,100 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const onSubmit = (data: ActivityFormData) => {
-    const activityData = {
-      ...data,
-      images,
-      included: includedItems.filter(item => item.trim() !== ''),
-      notIncluded: notIncludedItems.filter(item => item.trim() !== ''),
-      requirements: requirements.filter(item => item.trim() !== ''),
-      tags
-    };
-    onSave(activityData);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const isCheckbox = type === 'checkbox';
+    
+    setFormData({
+      ...formData,
+      [name]: isCheckbox ? (e.target as HTMLInputElement).checked : value
+    });
+  };
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.title) newErrors.title = 'El título es obligatorio';
+    if (!formData.description) newErrors.description = 'La descripción es obligatoria';
+    if (!formData.shortDescription) newErrors.shortDescription = 'La descripción corta es obligatoria';
+    if (!formData.price) newErrors.price = 'El precio es obligatorio';
+    if (!formData.duration) newErrors.duration = 'La duración es obligatoria';
+    if (!formData.location) newErrors.location = 'La ubicación es obligatoria';
+    if (!formData.category) newErrors.category = 'La categoría es obligatoria';
+    if (!formData.meetingPoint) newErrors.meetingPoint = 'El punto de encuentro es obligatorio';
+    if (includedItems.filter(item => item.trim()).length === 0) {
+      newErrors.included = 'Debe incluir al menos un elemento';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (validateForm()) {
+      const activityData = {
+        ...formData,
+        images,
+        included: includedItems.filter(item => item.trim() !== ''),
+        notIncluded: notIncludedItems.filter(item => item.trim() !== ''),
+        requirements: requirements.filter(item => item.trim() !== ''),
+        tags
+      };
+      onSave(activityData);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-xl shadow-strong w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-strong w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
             {activity ? 'Editar Actividad' : 'Nueva Actividad'}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               type="button"
               onClick={() => setShowPreview(!showPreview)}
-              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              {showPreview ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPreview ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-120px)]">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Título de la Actividad *
                 </label>
                 <input
-                  {...register('title')}
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
                   type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                   placeholder="Ej: Isla Saona - Tour Completo"
                 />
                 {errors.title && (
-                  <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.title}</p>
                 )}
               </div>
 
@@ -268,18 +256,20 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   Precio (USD) *
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                   <input
-                    {...register('price', { valueAsNumber: true })}
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
                     type="number"
                     min="1"
                     step="0.01"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                     placeholder="0.00"
                   />
                 </div>
                 {errors.price && (
-                  <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.price}</p>
                 )}
               </div>
 
@@ -288,10 +278,12 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   Duración *
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                   <select
-                    {...register('duration')}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent appearance-none"
+                    name="duration"
+                    value={formData.duration}
+                    onChange={handleChange}
+                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent appearance-none"
                   >
                     <option value="">Seleccionar duración</option>
                     {durations.map(duration => (
@@ -300,7 +292,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   </select>
                 </div>
                 {errors.duration && (
-                  <p className="text-red-500 text-sm mt-1">{errors.duration.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.duration}</p>
                 )}
               </div>
 
@@ -311,7 +303,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                 <div className="relative">
                   <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
-                    {...register('maxPeople', { valueAsNumber: true })}
+                    name="maxPeople"
+                    value={formData.maxPeople}
+                    onChange={handleChange}
                     type="number"
                     min="1"
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
@@ -319,7 +313,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   />
                 </div>
                 {errors.maxPeople && (
-                  <p className="text-red-500 text-sm mt-1">{errors.maxPeople.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.maxPeople}</p>
                 )}
               </div>
 
@@ -328,7 +322,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   Categoría *
                 </label>
                 <select
-                  {...register('category')}
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                 >
                   <option value="">Seleccionar categoría</option>
@@ -339,7 +335,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   ))}
                 </select>
                 {errors.category && (
-                  <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.category}</p>
                 )}
               </div>
             </div>
@@ -353,14 +349,16 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                 <div className="relative">
                   <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <input
-                    {...register('location')}
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
                     type="text"
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                     placeholder="Ej: Isla Saona, Punta Cana"
                   />
                 </div>
                 {errors.location && (
-                  <p className="text-red-500 text-sm mt-1">{errors.location.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.location}</p>
                 )}
               </div>
 
@@ -369,13 +367,15 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                   Punto de Encuentro *
                 </label>
                 <input
-                  {...register('meetingPoint')}
+                  name="meetingPoint"
+                  value={formData.meetingPoint}
+                  onChange={handleChange}
                   type="text"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                   placeholder="Ej: Lobby del hotel, Puerto de Bayahibe"
                 />
                 {errors.meetingPoint && (
-                  <p className="text-red-500 text-sm mt-1">{errors.meetingPoint.message}</p>
+                  <p className="text-red-500 text-sm mt-1">{errors.meetingPoint}</p>
                 )}
               </div>
             </div>
@@ -386,7 +386,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                 Descripción Corta * (máximo 150 caracteres)
               </label>
               <textarea
-                {...register('shortDescription')}
+                name="shortDescription"
+                value={formData.shortDescription}
+                onChange={handleChange}
                 rows={2}
                 maxLength={150}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent resize-none"
@@ -394,10 +396,10 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
               />
               <div className="flex justify-between items-center mt-1">
                 {errors.shortDescription && (
-                  <p className="text-red-500 text-sm">{errors.shortDescription.message}</p>
+                  <p className="text-red-500 text-sm">{errors.shortDescription}</p>
                 )}
                 <p className="text-gray-500 text-sm ml-auto">
-                  {watch('shortDescription')?.length || 0}/150
+                  {formData.shortDescription?.length || 0}/150
                 </p>
               </div>
             </div>
@@ -407,13 +409,15 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                 Descripción Completa *
               </label>
               <textarea
-                {...register('description')}
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent resize-none"
                 placeholder="Descripción detallada de la actividad, qué incluye, qué pueden esperar los turistas..."
               />
               {errors.description && (
-                <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.description}</p>
               )}
             </div>
 
@@ -507,7 +511,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
                 + Agregar elemento
               </button>
               {errors.included && (
-                <p className="text-red-500 text-sm mt-1">{errors.included.message}</p>
+                <p className="text-red-500 text-sm mt-1">{errors.included}</p>
               )}
             </div>
 
@@ -622,7 +626,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
                 <input
-                  {...register('featured')}
+                  name="featured"
+                  checked={formData.featured}
+                  onChange={(e) => setFormData({...formData, featured: e.target.checked})}
                   type="checkbox"
                   className="w-4 h-4 text-caribbean-600 border-gray-300 rounded focus:ring-caribbean-500"
                 />
@@ -633,7 +639,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
 
               <div className="flex items-center gap-3">
                 <input
-                  {...register('active')}
+                  name="active"
+                  checked={formData.active}
+                  onChange={(e) => setFormData({...formData, active: e.target.checked})}
                   type="checkbox"
                   className="w-4 h-4 text-caribbean-600 border-gray-300 rounded focus:ring-caribbean-500"
                 />
@@ -666,3 +674,11 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, on
     </div>
   );
 };
+
+interface ActivityFormProps {
+  activity?: any;
+  onSave: (data: any) => void;
+  onClose: () => void;
+}
+
+export { ActivityForm };
