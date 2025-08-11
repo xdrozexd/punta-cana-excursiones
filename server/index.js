@@ -13,6 +13,7 @@ import settingsRoutes from './routes/settings.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 
 // Configurar Prisma para usar PostgreSQL
 export const prisma = new PrismaClient({
@@ -24,7 +25,12 @@ export const prisma = new PrismaClient({
 });
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  // Accept single or comma-separated list of origins via env
+  origin: ALLOWED_ORIGIN === '*' ? true : ALLOWED_ORIGIN.split(',').map(o => o.trim()),
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(express.json());
 
