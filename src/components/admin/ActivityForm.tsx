@@ -4,14 +4,16 @@ import {
   X, 
   Upload, 
   Image as ImageIcon, 
-  MapPin, 
-  Clock, 
-  Users, 
   DollarSign,
   Save,
   Eye,
-  EyeOff,
-  Trash2
+  Shield,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Minus,
+  Star,
+  Clock
 } from 'lucide-react';
 
 // Eliminamos la validación con zod que está causando problemas
@@ -21,6 +23,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     description: activity?.description || '',
     shortDescription: activity?.shortDescription || '',
     price: activity?.price || 0,
+    originalPrice: activity?.originalPrice || 0,
     duration: activity?.duration || '',
     maxPeople: activity?.maxPeople || activity?.capacity || 10,
     location: activity?.location || '',
@@ -28,37 +31,69 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     meetingPoint: activity?.meetingPoint || '',
     featured: activity?.featured || false,
     active: activity?.active !== undefined ? activity.active : true,
+    minAge: activity?.minAge || 0,
+    pickupIncluded: activity?.pickupIncluded || false,
   });
   
   const [images, setImages] = useState<string[]>(activity?.images || []);
   const [dragOver, setDragOver] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [includedItems, setIncludedItems] = useState<string[]>(activity?.included || ['']);
-  const [notIncludedItems, setNotIncludedItems] = useState<string[]>(activity?.notIncluded || ['']);
+  const [notIncludedItems, setNotIncludedItems] = useState<string[]>(activity?.notIncluded || activity?.excluded || ['']);
   const [requirements, setRequirements] = useState<string[]>(activity?.requirements || ['']);
+  const [highlights, setHighlights] = useState<string[]>(activity?.highlights || ['']);
   const [tags, setTags] = useState<string[]>(activity?.tags || []);
+  const [languages, setLanguages] = useState<string[]>(activity?.languages || ['Español']);
+  const [availability, setAvailability] = useState<string[]>(activity?.availability || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']);
+  const [startTime, setStartTime] = useState<string[]>(activity?.startTime || ['9:00 AM']);
   const [newTag, setNewTag] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [newTimeHour, setNewTimeHour] = useState('00');
+  const [newTimeMinute, setNewTimeMinute] = useState('00');
+  const [newTimePeriod, setNewTimePeriod] = useState('AM');
 
   const categories = [
-    { value: 'tours-islas', label: 'Tours a Islas' },
-    { value: 'aventura', label: 'Aventura' },
-    { value: 'acuaticos', label: 'Deportes Acuáticos' },
-    { value: 'cultural', label: 'Cultural' },
-    { value: 'gastronomia', label: 'Gastronomía' },
-    { value: 'relax', label: 'Relax y Spa' },
-    { value: 'nocturna', label: 'Vida Nocturna' }
+    { value: 'islas-playas', label: 'Islas y Playas' },
+    { value: 'aventura-adrenalina', label: 'Aventura y Adrenalina' },
+    { value: 'naturaleza-ecoturismo', label: 'Naturaleza y Ecoturismo' },
+    { value: 'experiencias-acuaticas', label: 'Experiencias Acuáticas' },
+    { value: 'cultura-gastronomia', label: 'Cultura y Gastronomía' },
+    { value: 'tours-privados-vip', label: 'Tours Privados y VIP' },
+    { value: 'excursiones-1-dia', label: 'Excursiones de 1 Día Fuera de Punta Cana' },
+    { value: 'ofertas-promociones', label: 'Ofertas y Promociones' },
+    { value: 'top-excursiones', label: 'Top Excursiones Más Vendidas' }
   ];
 
   const durations = [
+    '15 minutos',
+    '1 hora',
     '2 horas',
+    '3 horas',
     '4 horas',
-    '6 horas',
-    '8 horas',
-    'Día completo',
-    '2 días',
-    '3 días'
+    '12 horas'
   ];
+
+  const languageOptions = [
+    'Español',
+    'Inglés',
+    'Francés',
+    'Alemán',
+    'Italiano',
+    'Portugués'
+  ];
+
+  const dayOptions = [
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+    'Domingo'
+  ];
+
+
+
+
 
   const handleImageUpload = (files: FileList | null) => {
     if (files) {
@@ -95,7 +130,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const addListItem = (type: 'included' | 'notIncluded' | 'requirements') => {
+  const addListItem = (type: 'included' | 'notIncluded' | 'requirements' | 'highlights') => {
     switch (type) {
       case 'included':
         setIncludedItems([...includedItems, '']);
@@ -106,10 +141,13 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
       case 'requirements':
         setRequirements([...requirements, '']);
         break;
+      case 'highlights':
+        setHighlights([...highlights, '']);
+        break;
     }
   };
 
-  const removeListItem = (type: 'included' | 'notIncluded' | 'requirements', index: number) => {
+  const removeListItem = (type: 'included' | 'notIncluded' | 'requirements' | 'highlights', index: number) => {
     switch (type) {
       case 'included':
         setIncludedItems(includedItems.filter((_, i) => i !== index));
@@ -120,25 +158,25 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
       case 'requirements':
         setRequirements(requirements.filter((_, i) => i !== index));
         break;
+      case 'highlights':
+        setHighlights(highlights.filter((_, i) => i !== index));
+        break;
     }
   };
 
-  const updateListItem = (type: 'included' | 'notIncluded' | 'requirements', index: number, value: string) => {
+  const updateListItem = (type: 'included' | 'notIncluded' | 'requirements' | 'highlights', index: number, value: string) => {
     switch (type) {
       case 'included':
-        const newIncluded = [...includedItems];
-        newIncluded[index] = value;
-        setIncludedItems(newIncluded);
+        setIncludedItems(includedItems.map((item, i) => i === index ? value : item));
         break;
       case 'notIncluded':
-        const newNotIncluded = [...notIncludedItems];
-        newNotIncluded[index] = value;
-        setNotIncludedItems(newNotIncluded);
+        setNotIncludedItems(notIncludedItems.map((item, i) => i === index ? value : item));
         break;
       case 'requirements':
-        const newRequirements = [...requirements];
-        newRequirements[index] = value;
-        setRequirements(newRequirements);
+        setRequirements(requirements.map((item, i) => i === index ? value : item));
+        break;
+      case 'highlights':
+        setHighlights(highlights.map((item, i) => i === index ? value : item));
         break;
     }
   };
@@ -154,30 +192,47 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const addTime = () => {
+    const newTime = `${newTimeHour}:${newTimeMinute} ${newTimePeriod}`;
+    if (!startTime.includes(newTime)) {
+      setStartTime([...startTime, newTime]);
+      // Reset form
+      setNewTimeHour('00');
+      setNewTimeMinute('00');
+      setNewTimePeriod('AM');
+    }
+  };
+
+  const removeTime = (timeToRemove: string) => {
+    setStartTime(startTime.filter(time => time !== timeToRemove));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const isCheckbox = type === 'checkbox';
-    
-    setFormData({
-      ...formData,
-      [name]: isCheckbox ? (e.target as HTMLInputElement).checked : value
-    });
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseFloat(value) || 0 : value
+    }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: checked
+    }));
   };
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
-    if (!formData.title) newErrors.title = 'El título es obligatorio';
-    if (!formData.description) newErrors.description = 'La descripción es obligatoria';
-    if (!formData.shortDescription) newErrors.shortDescription = 'La descripción corta es obligatoria';
-    if (!formData.price) newErrors.price = 'El precio es obligatorio';
-    if (!formData.duration) newErrors.duration = 'La duración es obligatoria';
-    if (!formData.location) newErrors.location = 'La ubicación es obligatoria';
-    if (!formData.category) newErrors.category = 'La categoría es obligatoria';
-    if (!formData.meetingPoint) newErrors.meetingPoint = 'El punto de encuentro es obligatorio';
-    if (includedItems.filter(item => item.trim()).length === 0) {
-      newErrors.included = 'Debe incluir al menos un elemento';
-    }
+    if (!formData.title.trim()) newErrors.title = 'El título es requerido';
+    if (!formData.description.trim()) newErrors.description = 'La descripción es requerida';
+    if (formData.price <= 0) newErrors.price = 'El precio debe ser mayor a 0';
+    if (!formData.duration) newErrors.duration = 'La duración es requerida';
+    if (!formData.location.trim()) newErrors.location = 'La ubicación es requerida';
+    if (!formData.category) newErrors.category = 'La categoría es requerida';
+    if (startTime.length === 0) newErrors.startTime = 'Debe agregar al menos un horario';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -186,499 +241,738 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateForm()) {
-      const activityData = {
-        ...formData,
-        images,
-        included: includedItems.filter(item => item.trim() !== ''),
-        notIncluded: notIncludedItems.filter(item => item.trim() !== ''),
-        requirements: requirements.filter(item => item.trim() !== ''),
-        tags
-      };
-      onSave(activityData);
-    }
+    if (!validateForm()) return;
+    
+    // Filtrar elementos vacíos de las listas
+    const filteredIncluded = includedItems.filter(item => item.trim());
+    const filteredNotIncluded = notIncludedItems.filter(item => item.trim());
+    const filteredRequirements = requirements.filter(item => item.trim());
+    const filteredHighlights = highlights.filter(item => item.trim());
+    
+    const activityData = {
+      ...formData,
+      name: formData.title, // Para compatibilidad con la base de datos
+      images: images,
+      included: filteredIncluded,
+      notIncluded: filteredNotIncluded,
+      excluded: filteredNotIncluded, // Para compatibilidad
+      requirements: filteredRequirements,
+      highlights: filteredHighlights,
+      tags: tags,
+      languages: languages,
+      availability: availability,
+      startTime: startTime,
+      capacity: formData.maxPeople, // Para compatibilidad
+      maxPeople: formData.maxPeople,
+      slug: formData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    };
+    
+    onSave(activityData);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-xl shadow-strong w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden"
-      >
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    >
+      <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
-            {activity ? 'Editar Actividad' : 'Nueva Actividad'}
+        <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-gray-200 bg-white rounded-t-2xl">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {activity ? 'Editar Actividad' : 'Crear Nueva Actividad'}
           </h2>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => setShowPreview(!showPreview)}
-              className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              {showPreview ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Cerrar formulario"
+            title="Cerrar formulario"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
 
-        {/* Form Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-120px)]">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div className="sm:col-span-2">
+        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+          {/* Información Básica */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Eye className="mr-2 h-5 w-5" />
+                Información Básica
+              </h3>
+              
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Título de la Actividad *
                 </label>
                 <input
+                  type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  type="text"
-                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                    errors.title ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Ej: Isla Saona - Tour Completo"
                 />
-                {errors.title && (
-                  <p className="text-red-500 text-sm mt-1">{errors.title}</p>
-                )}
+                {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Precio (USD) *
+                  Descripción Corta
                 </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-                  <input
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="0.00"
-                  />
+                <textarea
+                  name="shortDescription"
+                  value={formData.shortDescription}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                  placeholder="Descripción breve para las tarjetas..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descripción Completa *
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={6}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                    errors.description ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Descripción detallada de la actividad..."
+                />
+                {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <DollarSign className="mr-2 h-5 w-5" />
+                Precios y Configuración
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Precio Actual *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                        errors.price ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
                 </div>
-                {errors.price && (
-                  <p className="text-red-500 text-sm mt-1">{errors.price}</p>
-                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Precio Original
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      name="originalPrice"
+                      value={formData.originalPrice}
+                      onChange={handleChange}
+                      min="0"
+                      step="0.01"
+                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duración *
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duración *
+                  </label>
                   <select
                     name="duration"
                     value={formData.duration}
                     onChange={handleChange}
-                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent appearance-none"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                      errors.duration ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    aria-label="Seleccionar duración de la actividad"
+                    title="Seleccionar duración de la actividad"
                   >
                     <option value="">Seleccionar duración</option>
                     {durations.map(duration => (
                       <option key={duration} value={duration}>{duration}</option>
                     ))}
                   </select>
+                  {errors.duration && <p className="mt-1 text-sm text-red-600">{errors.duration}</p>}
                 </div>
-                {errors.duration && (
-                  <p className="text-red-500 text-sm mt-1">{errors.duration}</p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Máximo de Personas *
-                </label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Capacidad Máxima
+                  </label>
                   <input
+                    type="number"
                     name="maxPeople"
                     value={formData.maxPeople}
                     onChange={handleChange}
-                    type="number"
                     min="1"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="50"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="10"
                   />
                 </div>
-                {errors.maxPeople && (
-                  <p className="text-red-500 text-sm mt-1">{errors.maxPeople}</p>
-                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoría *
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                >
-                  <option value="">Seleccionar categoría</option>
-                  {categories.map(category => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className="text-red-500 text-sm mt-1">{errors.category}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ubicación *
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Edad Mínima
+                  </label>
                   <input
-                    name="location"
-                    value={formData.location}
+                    type="number"
+                    name="minAge"
+                    value={formData.minAge}
                     onChange={handleChange}
-                    type="text"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="Ej: Isla Saona, Punta Cana"
+                    min="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="0"
                   />
                 </div>
-                {errors.location && (
-                  <p className="text-red-500 text-sm mt-1">{errors.location}</p>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Punto de Encuentro *
-                </label>
-                <input
-                  name="meetingPoint"
-                  value={formData.meetingPoint}
-                  onChange={handleChange}
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                  placeholder="Ej: Lobby del hotel, Puerto de Bayahibe"
-                />
-                {errors.meetingPoint && (
-                  <p className="text-red-500 text-sm mt-1">{errors.meetingPoint}</p>
-                )}
+                <div className="flex items-center space-x-3 pt-6">
+                  <input
+                    type="checkbox"
+                    name="pickupIncluded"
+                    id="pickupIncluded"
+                    checked={formData.pickupIncluded}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-caribbean-600 focus:ring-caribbean-500 border-gray-300 rounded"
+                    aria-label="Incluye recogida en hotel"
+                  />
+                  <label htmlFor="pickupIncluded" className="text-sm font-medium text-gray-700">
+                    Incluye recogida en hotel
+                  </label>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Descriptions */}
+          {/* Ubicación y Categoría */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción Corta * (máximo 150 caracteres)
+                Ubicación *
               </label>
-              <textarea
-                name="shortDescription"
-                value={formData.shortDescription}
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
                 onChange={handleChange}
-                rows={2}
-                maxLength={150}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent resize-none"
-                placeholder="Descripción breve que aparecerá en las tarjetas de actividades"
-              />
-              <div className="flex justify-between items-center mt-1">
-                {errors.shortDescription && (
-                  <p className="text-red-500 text-sm">{errors.shortDescription}</p>
-                )}
-                <p className="text-gray-500 text-sm ml-auto">
-                  {formData.shortDescription?.length || 0}/150
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descripción Completa *
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent resize-none"
-                placeholder="Descripción detallada de la actividad, qué incluye, qué pueden esperar los turistas..."
-              />
-              {errors.description && (
-                <p className="text-red-500 text-sm mt-1">{errors.description}</p>
-              )}
-            </div>
-
-            {/* Images Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Imágenes de la Actividad
-              </label>
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`border-2 border-dashed rounded-lg p-6 transition-colors ${
-                  dragOver ? 'border-caribbean-500 bg-caribbean-50' : 'border-gray-300'
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                  errors.location ? 'border-red-500' : 'border-gray-300'
                 }`}
+                placeholder="Ej: Isla Saona, Punta Cana"
+              />
+              {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categoría *
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent ${
+                  errors.category ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-label="Seleccionar categoría de la actividad"
+                title="Seleccionar categoría de la actividad"
               >
-                <div className="text-center">
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">
-                    Arrastra las imágenes aquí o
-                  </p>
+                <option value="">Seleccionar categoría</option>
+                {categories.map(category => (
+                  <option key={category.value} value={category.value}>{category.label}</option>
+                ))}
+              </select>
+              {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Punto de Encuentro
+            </label>
+            <input
+              type="text"
+              name="meetingPoint"
+              value={formData.meetingPoint}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+              placeholder="Ej: Lobby del hotel o punto específico"
+            />
+          </div>
+
+          {/* Imágenes */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <ImageIcon className="mr-2 h-5 w-5" />
+              Imágenes de la Actividad
+            </h3>
+            
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                dragOver ? 'border-caribbean-500 bg-caribbean-50' : 'border-gray-300'
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-600 mb-2">
+                Arrastra y suelta imágenes aquí, o{' '}
+                <label className="text-caribbean-600 hover:text-caribbean-500 cursor-pointer">
+                  selecciona archivos
                   <input
                     type="file"
                     multiple
                     accept="image/*"
                     onChange={(e) => handleImageUpload(e.target.files)}
                     className="hidden"
-                    id="image-upload"
                   />
-                  <label
-                    htmlFor="image-upload"
-                    className="bg-caribbean-600 hover:bg-caribbean-700 text-white px-4 py-2 rounded-lg cursor-pointer inline-flex items-center gap-2 transition-colors"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Seleccionar Archivos
-                  </label>
-                </div>
-              </div>
-
-              {/* Image Preview */}
-              {images.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                </label>
+              </p>
+              <p className="text-sm text-gray-500">PNG, JPG, GIF hasta 10MB cada una</p>
             </div>
 
-            {/* Included Items */}
+            {images.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image}
+                      alt={`Imagen ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`Eliminar imagen ${index + 1}`}
+                      title={`Eliminar imagen ${index + 1}`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Listas de Incluido/No Incluido/Requisitos/Destacados */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Incluido */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Qué Incluye *
-              </label>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
+                Lo que está Incluido
+              </h3>
               {includedItems.map((item, index) => (
-                <div key={index} className="flex gap-2 mb-2">
+                <div key={index} className="flex items-center mb-2">
                   <input
                     type="text"
                     value={item}
                     onChange={(e) => updateListItem('included', index, e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="Ej: Transporte desde el hotel"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="Ej: Transporte de ida y vuelta"
                   />
                   <button
                     type="button"
                     onClick={() => removeListItem('included', index)}
-                    className="p-2 text-red-500 hover:text-red-700"
+                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    aria-label={`Eliminar elemento incluido ${index + 1}`}
+                    title={`Eliminar elemento incluido ${index + 1}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Minus className="h-4 w-4" />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
                 onClick={() => addListItem('included')}
-                className="text-caribbean-600 hover:text-caribbean-700 text-sm font-medium"
+                className="mt-2 flex items-center text-caribbean-600 hover:text-caribbean-500"
               >
-                + Agregar elemento
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar elemento
               </button>
-              {errors.included && (
-                <p className="text-red-500 text-sm mt-1">{errors.included}</p>
-              )}
             </div>
 
-            {/* Not Included Items */}
+            {/* No Incluido */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Qué NO Incluye
-              </label>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <XCircle className="mr-2 h-5 w-5 text-red-600" />
+                Lo que NO está Incluido
+              </h3>
               {notIncludedItems.map((item, index) => (
-                <div key={index} className="flex gap-2 mb-2">
+                <div key={index} className="flex items-center mb-2">
                   <input
                     type="text"
                     value={item}
                     onChange={(e) => updateListItem('notIncluded', index, e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="Ej: Bebidas alcohólicas"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="Ej: Propinas"
                   />
                   <button
                     type="button"
                     onClick={() => removeListItem('notIncluded', index)}
-                    className="p-2 text-red-500 hover:text-red-700"
+                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    aria-label={`Eliminar elemento no incluido ${index + 1}`}
+                    title={`Eliminar elemento no incluido ${index + 1}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Minus className="h-4 w-4" />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
                 onClick={() => addListItem('notIncluded')}
-                className="text-caribbean-600 hover:text-caribbean-700 text-sm font-medium"
+                className="mt-2 flex items-center text-caribbean-600 hover:text-caribbean-500"
               >
-                + Agregar elemento
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar elemento
               </button>
             </div>
+          </div>
 
-            {/* Requirements */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Requisitos */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Requisitos y Recomendaciones
-              </label>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Shield className="mr-2 h-5 w-5 text-blue-600" />
+                Requisitos
+              </h3>
               {requirements.map((item, index) => (
-                <div key={index} className="flex gap-2 mb-2">
+                <div key={index} className="flex items-center mb-2">
                   <input
                     type="text"
                     value={item}
                     onChange={(e) => updateListItem('requirements', index, e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                    placeholder="Ej: Traer protector solar"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="Ej: Ropa cómoda"
                   />
                   <button
                     type="button"
                     onClick={() => removeListItem('requirements', index)}
-                    className="p-2 text-red-500 hover:text-red-700"
+                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    aria-label={`Eliminar requisito ${index + 1}`}
+                    title={`Eliminar requisito ${index + 1}`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Minus className="h-4 w-4" />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
                 onClick={() => addListItem('requirements')}
-                className="text-caribbean-600 hover:text-caribbean-700 text-sm font-medium"
+                className="mt-2 flex items-center text-caribbean-600 hover:text-caribbean-500"
               >
-                + Agregar requisito
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar requisito
               </button>
             </div>
 
+            {/* Destacados */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Star className="mr-2 h-5 w-5 text-yellow-600" />
+                Puntos Destacados
+              </h3>
+              {highlights.map((item, index) => (
+                <div key={index} className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateListItem('highlights', index, e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                    placeholder="Ej: Experiencia única"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeListItem('highlights', index)}
+                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                    aria-label={`Eliminar destacado ${index + 1}`}
+                    title={`Eliminar destacado ${index + 1}`}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addListItem('highlights')}
+                className="mt-2 flex items-center text-caribbean-600 hover:text-caribbean-500"
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar destacado
+              </button>
+            </div>
+          </div>
+
+          {/* Configuración Adicional */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Tags */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Etiquetas
-              </label>
-              <div className="flex gap-2 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Etiquetas</h3>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-caribbean-100 text-caribbean-800"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-2 text-caribbean-600 hover:text-caribbean-800"
+                      aria-label={`Eliminar etiqueta ${tag}`}
+                      title={`Eliminar etiqueta ${tag}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex">
                 <input
                   type="text"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                  placeholder="Ej: romántico, aventura, familia"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                  placeholder="Nueva etiqueta"
                 />
                 <button
                   type="button"
                   onClick={addTag}
-                  className="px-4 py-2 bg-caribbean-600 text-white rounded-lg hover:bg-caribbean-700"
+                  className="px-4 py-2 bg-caribbean-600 text-white rounded-r-lg hover:bg-caribbean-700"
+                  aria-label="Agregar nueva etiqueta"
+                  title="Agregar nueva etiqueta"
                 >
-                  Agregar
+                  <Plus className="h-4 w-4" />
                 </button>
               </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="bg-caribbean-100 text-caribbean-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="text-caribbean-600 hover:text-caribbean-800"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-center gap-3">
-                <input
-                  name="featured"
-                  checked={formData.featured}
-                  onChange={(e) => setFormData({...formData, featured: e.target.checked})}
-                  type="checkbox"
-                  className="w-4 h-4 text-caribbean-600 border-gray-300 rounded focus:ring-caribbean-500"
-                />
-                <label className="text-sm font-medium text-gray-700">
-                  Actividad Destacada
-                </label>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  name="active"
-                  checked={formData.active}
-                  onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                  type="checkbox"
-                  className="w-4 h-4 text-caribbean-600 border-gray-300 rounded focus:ring-caribbean-500"
-                />
-                <label className="text-sm font-medium text-gray-700">
-                  Actividad Activa
-                </label>
+            {/* Idiomas */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Idiomas Disponibles</h3>
+              <div className="space-y-2">
+                {languageOptions.map(lang => (
+                  <label key={lang} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={languages.includes(lang)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setLanguages([...languages, lang]);
+                        } else {
+                          setLanguages(languages.filter(l => l !== lang));
+                        }
+                      }}
+                      className="h-4 w-4 text-caribbean-600 focus:ring-caribbean-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{lang}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* Form Actions */}
-            <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
+            {/* Disponibilidad */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Días Disponibles</h3>
+              <div className="space-y-2">
+                {dayOptions.map(day => (
+                  <label key={day} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={availability.includes(day)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAvailability([...availability, day]);
+                        } else {
+                          setAvailability(availability.filter(d => d !== day));
+                        }
+                      }}
+                      className="h-4 w-4 text-caribbean-600 focus:ring-caribbean-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{day}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Horarios de Inicio */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Horarios de la Actividad</h3>
+            
+            {/* Agregar nuevo horario */}
+            <div className="flex items-center space-x-2 mb-4 p-4 bg-gray-50 rounded-lg">
+              <select
+                value={newTimeHour}
+                onChange={(e) => setNewTimeHour(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                aria-label="Seleccionar hora"
+                title="Seleccionar hora"
+              >
+                {Array.from({length: 13}, (_, i) => i).map(hour => (
+                  <option key={hour} value={hour.toString().padStart(2, '0')}>
+                    {hour.toString().padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              
+              <span className="text-gray-500">:</span>
+              
+              <select
+                value={newTimeMinute}
+                onChange={(e) => setNewTimeMinute(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                aria-label="Seleccionar minutos"
+                title="Seleccionar minutos"
+              >
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+              </select>
+              
+              <select
+                value={newTimePeriod}
+                onChange={(e) => setNewTimePeriod(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                aria-label="Seleccionar período AM/PM"
+                title="Seleccionar período AM/PM"
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+              
               <button
                 type="button"
-                onClick={onClose}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={addTime}
+                className="px-4 py-2 bg-caribbean-600 text-white rounded-lg hover:bg-caribbean-700 transition-colors flex items-center"
               >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-caribbean-600 hover:bg-caribbean-700 text-white rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                {activity ? 'Actualizar' : 'Crear'} Actividad
+                <Plus className="mr-1 h-4 w-4" />
+                Agregar Horario
               </button>
             </div>
-          </form>
-        </div>
-      </motion.div>
-    </div>
+
+            {/* Lista de horarios configurados */}
+            {startTime.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-gray-700">Horarios configurados:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {startTime.map((time, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                      <span className="text-sm font-medium text-gray-900">{time}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTime(time)}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        aria-label={`Eliminar horario ${time}`}
+                        title={`Eliminar horario ${time}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {startTime.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Clock className="mx-auto h-12 w-12 mb-2" />
+                <p>No hay horarios configurados</p>
+                <p className="text-sm">Agrega al menos un horario para esta actividad</p>
+              </div>
+            )}
+            
+            {errors.startTime && (
+              <p className="mt-2 text-sm text-red-600">{errors.startTime}</p>
+            )}
+          </div>
+
+          {/* Configuración de Estado */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-6">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="featured"
+                  checked={formData.featured}
+                  onChange={handleCheckboxChange}
+                  className="h-4 w-4 text-caribbean-600 focus:ring-caribbean-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm font-medium text-gray-700">Destacado</span>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="active"
+                  checked={formData.active}
+                  onChange={handleCheckboxChange}
+                  className="h-4 w-4 text-caribbean-600 focus:ring-caribbean-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm font-medium text-gray-700">Activo</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Botones de Acción */}
+          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-caribbean-600 text-white rounded-lg hover:bg-caribbean-700 transition-colors flex items-center"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {activity ? 'Actualizar' : 'Crear'} Actividad
+            </button>
+          </div>
+        </form>
+      </div>
+    </motion.div>
   );
 };
 
 interface ActivityFormProps {
   activity?: any;
-  onSave: (data: any) => void;
+  onSave: (_data: any) => void;
   onClose: () => void;
 }
 
-export { ActivityForm };
+export default ActivityForm;

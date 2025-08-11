@@ -28,6 +28,23 @@ model Activity {
   category    String    @default("tour")
   rating      Float     @default(4.5)
   reviews     Int       @default(0)
+  
+  // Campos adicionales para el frontend
+  shortDescription String?   // Descripción corta
+  meetingPoint     String?   // Punto de encuentro
+  included         String[]  @default([])  // Lo que está incluido
+  notIncluded      String[]  @default([])  // Lo que NO está incluido
+  requirements     String[]  @default([])  // Requisitos
+  highlights       String[]  @default([])  // Puntos destacados
+  tags            String[]  @default([])   // Etiquetas
+  images          String[]  @default([])   // Múltiples imágenes
+  languages       String[]  @default(["Español"])  // Idiomas disponibles
+  availability    String[]  @default(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])  // Días disponibles
+  startTime       String[]  @default(["9:00 AM"])  // Horarios de inicio
+  originalPrice   Float?    // Precio original (para descuentos)
+  minAge          Int       @default(0)    // Edad mínima
+  pickupIncluded  Boolean   @default(false) // Incluye recogida
+  itinerary       Json?     // Itinerario detallado
 }
 
 model Booking {

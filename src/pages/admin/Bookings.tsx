@@ -257,28 +257,33 @@ const Bookings: React.FC = () => {
         {showFilters && (
           <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="fecha-desde" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha desde
               </label>
               <input
+                id="fecha-desde"
                 type="date"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="fecha-hasta" className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha hasta
               </label>
               <input
+                id="fecha-hasta"
                 type="date"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="actividad-filtro" className="block text-sm font-medium text-gray-700 mb-1">
                 Actividad
               </label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+              <select 
+                id="actividad-filtro"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+              >
                 <option value="">Todas las actividades</option>
                 <option>Isla Saona - Tour Completo</option>
                 <option>Hoyo Azul y Scape Park</option>
@@ -354,13 +359,23 @@ const Bookings: React.FC = () => {
                       <button 
                         onClick={() => openBookingDetails(booking)}
                         className="text-sky-600 hover:text-sky-900 p-1 rounded-full hover:bg-sky-50"
+                        title="Ver detalles"
+                        aria-label="Ver detalles de la reserva"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      <button className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50">
+                      <button 
+                        className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50"
+                        title="Editar"
+                        aria-label="Editar reserva"
+                      >
                         <Edit className="w-5 h-5" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50">
+                      <button 
+                        className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+                        title="Eliminar"
+                        aria-label="Eliminar reserva"
+                      >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
@@ -402,6 +417,8 @@ const Bookings: React.FC = () => {
                 <button 
                   onClick={() => setSelectedBooking(null)}
                   className="text-gray-400 hover:text-gray-600"
+                  title="Cerrar"
+                  aria-label="Cerrar modal de detalles"
                 >
                   <X className="w-5 h-5" />
                 </button>

@@ -98,15 +98,15 @@ export const generateId = (): string => {
 /**
  * Debounce function para optimizar búsquedas
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (..._args: any[]) => any>(
   func: T,
   delay: number
-): (...args: Parameters<T>) => void => {
+): (..._args: Parameters<T>) => void => {
   let timeoutId: number;
   
-  return (...args: Parameters<T>) => {
+  return (..._args: Parameters<T>) => {
     clearTimeout(timeoutId);
-    timeoutId = window.setTimeout(() => func(...args), delay);
+    timeoutId = window.setTimeout(() => func(..._args), delay);
   };
 };
 

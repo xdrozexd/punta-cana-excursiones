@@ -15,7 +15,7 @@ interface AuthState {
 
 interface AuthContextType {
   auth: AuthState;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (_email: string, _password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -46,18 +46,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (_email: string, _password: string): Promise<boolean> => {
     setIsLoading(true);
     
     // Simulamos una llamada a API
     return new Promise((resolve) => {
       setTimeout(() => {
-        if (email === 'admin@puntacanaexcursiones.com' && password === 'admin123') {
+        if (_email === 'admin@puntacanaexcursiones.com' && _password === 'admin123') {
           const authData = {
             isLoggedIn: true,
             user: {
               name: 'Administrador',
-              email: email,
+              email: _email,
               role: 'admin'
             },
             token: 'mock-jwt-token-' + Date.now()

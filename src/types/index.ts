@@ -80,8 +80,8 @@ export interface UploadedFile {
   createdAt: string;
 }
 
-// Notification types
-export interface Notification {
+// App notification types (renamed to avoid conflict with built-in Notification)
+export interface AppNotification {
   id: string;
   title: string;
   message: string;

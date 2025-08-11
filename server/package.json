@@ -1,0 +1,30 @@
+{
+  "name": "punta-cana-excursiones-server",
+  "version": "1.0.0",
+  "description": "Backend API para Punta Cana Excursiones",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.13.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "helmet": "^7.0.0",
+    "prisma": "^6.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "api",
+    "excursiones",
+    "punta-cana"
+  ],
+  "author": "Punta Cana Excursiones",
+  "license": "MIT"
+}

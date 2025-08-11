@@ -6,7 +6,7 @@ import {
   MapPin,
   RefreshCw
 } from 'lucide-react';
-import { ActivityForm } from '../../components/admin/ActivityForm';
+import ActivityForm from '../../components/admin/ActivityForm';
 import { ConfirmDialog } from '../../components/admin/ConfirmDialog';
 import { ActivityCard } from '../../components/admin/ActivityCard';
 import { useData } from '../../contexts/DataContext';
@@ -77,8 +77,8 @@ const Activities = () => {
       try {
         await deleteActivity(deletingActivity.id);
         toast.success(`Actividad "${deletingActivity.name}" eliminada correctamente`);
-        setShowDeleteDialog(false);
-        setDeletingActivity(null);
+      setShowDeleteDialog(false);
+      setDeletingActivity(null);
       } catch (error) {
         toast.error('Error al eliminar la actividad');
         console.error('Error al eliminar actividad:', error);
@@ -124,17 +124,41 @@ const Activities = () => {
         // Campos adicionales para el frontend
         shortDescription: activityData.shortDescription,
         meetingPoint: activityData.meetingPoint,
-        included: activityData.included,
-        notIncluded: activityData.notIncluded,
-        requirements: activityData.requirements,
-        tags: activityData.tags,
-        images: activityData.images
+        included: activityData.included || [],
+        notIncluded: activityData.notIncluded || [],
+        requirements: activityData.requirements || [],
+        tags: activityData.tags || [],
+        images: activityData.images || [],
+        highlights: activityData.highlights || [],
+        languages: activityData.languages || ['Español'],
+        availability: activityData.availability || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+        startTime: activityData.startTime || ['9:00 AM'],
+        originalPrice: activityData.originalPrice,
+        minAge: activityData.minAge || 0,
+        pickupIncluded: activityData.pickupIncluded || false,
+        itinerary: activityData.itinerary || [
+          {
+            time: '9:00 AM',
+            title: 'Inicio de la actividad',
+            description: 'Recogida en el hotel y traslado al punto de inicio.'
+          },
+          {
+            time: '12:00 PM',
+            title: 'Almuerzo',
+            description: 'Tiempo para disfrutar de la gastronomía local.'
+          },
+          {
+            time: '4:00 PM',
+            title: 'Fin de la actividad',
+            description: 'Regreso al hotel.'
+          }
+        ]
       };
       
       console.log('Datos adaptados para enviar a la API:', adaptedData);
       
-      if (editingActivity) {
-        // Actualizar actividad existente
+    if (editingActivity) {
+      // Actualizar actividad existente
         const updatedActivity = await updateActivity(editingActivity.id, {
           ...adaptedData,
           id: editingActivity.id,
@@ -142,8 +166,18 @@ const Activities = () => {
           updatedAt: new Date().toISOString()
         });
         toast.success(`Actividad "${updatedActivity.name}" actualizada correctamente`);
-      } else {
-        // Crear nueva actividad
+        
+        // Forzar actualización de datos para sincronizar con la página de detalles
+        setTimeout(async () => {
+          try {
+            await refreshData();
+            console.log('Datos refrescados después de actualizar actividad');
+          } catch (error) {
+            console.error('Error al refrescar datos después de actualizar:', error);
+          }
+        }, 500);
+    } else {
+      // Crear nueva actividad
         const newActivity = await addActivity({
           ...adaptedData,
           id: 'temp_' + Date.now(),
@@ -151,8 +185,8 @@ const Activities = () => {
           updatedAt: new Date().toISOString()
         });
         toast.success(`Actividad "${newActivity.name}" creada correctamente`);
-      }
-      setShowForm(false);
+    }
+    setShowForm(false);
     } catch (error) {
       toast.error('Error al guardar la actividad');
       console.error('Error al guardar actividad:', error);
@@ -210,15 +244,15 @@ const Activities = () => {
               <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Actualizando...' : 'Actualizar'}
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleAddActivity}
-              className="bg-caribbean-600 hover:bg-caribbean-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors duration-200"
-            >
-              <Plus className="w-5 h-5" />
-              Nueva Actividad
-            </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleAddActivity}
+            className="bg-caribbean-600 hover:bg-caribbean-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors duration-200"
+          >
+            <Plus className="w-5 h-5" />
+            Nueva Actividad
+          </motion.button>
           </div>
         </div>
 
@@ -242,6 +276,8 @@ const Activities = () => {
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+              aria-label="Filtrar por categoría"
+              title="Filtrar por categoría"
             >
               {categories.map(category => (
                 <option key={category.value} value={category.value}>
@@ -255,6 +291,8 @@ const Activities = () => {
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+              aria-label="Ordenar actividades"
+              title="Ordenar actividades"
             >
               <option value="newest">Más recientes</option>
               <option value="oldest">Más antiguos</option>

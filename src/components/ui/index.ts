@@ -1,6 +1,7 @@
 // Barrel exports para componentes UI
+export { default as Button } from './Button';
+export { default as Skeleton, TourCardSkeleton, GallerySkeleton, FormSkeleton } from './Skeleton';
 export { ImageWithFallback } from './ImageWithFallback';
-export { Button } from './Button';
-export { TourCard } from './TourCard';
 export { Loader } from './Loader';
+export { TourCard } from './TourCard';
 

@@ -35,13 +35,13 @@ export function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-export function debounce<T extends (...args: any[]) => void>(
+export function debounce<T extends (..._args: any[]) => void>(
   func: T,
   delay: number
-): (...args: Parameters<T>) => void {
+): (..._args: Parameters<T>) => void {
   let timeoutId: number;
-  return (...args: Parameters<T>) => {
+  return (..._args: Parameters<T>) => {
     clearTimeout(timeoutId);
-    timeoutId = window.setTimeout(() => func(...args), delay);
+    timeoutId = window.setTimeout(() => func(..._args), delay);
   };
 }

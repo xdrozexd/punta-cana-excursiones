@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   ArrowRight, 
   Star, 
@@ -14,78 +15,6 @@ import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
 import { useData } from '../contexts/DataContext';
-
-// Datos de ejemplo para tours destacados (no se usa, se obtienen de la API)
-// const _featuredTours = [
-//   {
-//     id: '1',
-//     title: 'Isla Saona - Tour Completo',
-//     description: 'Descubre la paradisíaca Isla Saona con sus playas de arena blanca y aguas cristalinas. Incluye transporte, almuerzo buffet y bebidas.',
-//     price: 89,
-//     duration: '8 horas',
-//     rating: 4.9,
-//     reviewCount: 128,
-//     maxPeople: 20,
-//     location: 'Isla Saona',
-//     category: 'tours-islas' as const,
-//     imageUrl: 'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
-//     images: ['https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&h=600'],
-//     included: ['Transporte', 'Almuerzo buffet', 'Bebidas'],
-//     featured: true,
-//     tags: ['Destacado', 'Playa'],
-//   },
-//   {
-//     id: '2',
-//     title: 'Hoyo Azul y Scape Park',
-//     description: 'Aventura en el parque ecológico Scape Park con acceso al impresionante cenote Hoyo Azul. Incluye tirolinas y actividades de aventura.',
-//     price: 125,
-//     duration: '6 horas',
-//     rating: 4.8,
-//     reviewCount: 96,
-//     maxPeople: 15,
-//     location: 'Cap Cana',
-//     category: 'aventura' as const,
-//     imageUrl: 'https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
-//     images: ['https://images.pexels.com/photos/1666021/pexels-photo-1666021.jpeg?auto=compress&cs=tinysrgb&w=800&h=600'],
-//     included: ['Entrada al parque', 'Tirolinas', 'Guía'],
-//     featured: true,
-//     tags: ['Aventura'],
-//   },
-//   {
-//     id: '3',
-//     title: 'Catamarán Party',
-//     description: 'Disfruta de un día en alta mar con música, bebidas ilimitadas y snorkeling en los arrecifes más hermosos de Punta Cana.',
-//     price: 95,
-//     duration: '5 horas',
-//     rating: 4.7,
-//     reviewCount: 112,
-//     maxPeople: 25,
-//     location: 'Playa Bávaro',
-//     category: 'acuaticos' as const,
-//     imageUrl: 'https://images.pexels.com/photos/1430672/pexels-photo-1430672.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
-//     images: ['https://images.pexels.com/photos/1430672/pexels-photo-1430672.jpeg?auto=compress&cs=tinysrgb&w=800&h=600'],
-//     included: ['Bebidas ilimitadas', 'Snorkeling', 'Música'],
-//     featured: true,
-//     tags: ['Fiesta', 'Acuático'],
-//   },
-//   {
-//     id: '4',
-//     title: 'Safari Aventura',
-//     description: 'Explora la auténtica República Dominicana visitando plantaciones, escuelas rurales y conociendo la cultura local.',
-//     price: 79,
-//     duration: '7 horas',
-//     rating: 4.6,
-//     reviewCount: 85,
-//     maxPeople: 12,
-//     location: 'Interior de la isla',
-//     category: 'cultural' as const,
-//     imageUrl: 'https://images.pexels.com/photos/2774546/pexels-photo-2774546.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
-//     images: ['https://images.pexels.com/photos/2774546/pexels-photo-2774546.jpeg?auto=compress&cs=tinysrgb&w=800&h=600'],
-//     included: ['Transporte 4x4', 'Guía local', 'Visita escuela'],
-//     featured: true,
-//     tags: ['Cultural'],
-//   },
-// ];
 
 // Datos de ejemplo para testimonios
 const testimonials = [
@@ -177,7 +106,7 @@ export const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600">
         <div className="absolute inset-0 bg-black/40"></div>
-                  <div 
+        <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url("https://images.pexels.com/photos/1874641/pexels-photo-1874641.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080"), url("https://images.pexels.com/photos/1450372/pexels-photo-1450372.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080")`
@@ -212,23 +141,26 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Button 
-              href="/tours"
-              variant="primary"
-              size="xl"
-              rightIcon={<ArrowRight />}
-            >
-              Explorar Tours
-            </Button>
+            <Link to="/tours">
+              <Button 
+                variant="primary"
+                size="lg"
+                className="flex items-center gap-2"
+              >
+                Explorar Tours
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
             
-            <Button 
-              href="/contact"
-              variant="outline"
-              size="xl"
-              className="bg-white/10 border-white text-white hover:bg-white hover:text-gray-900"
-            >
-              Contactar Ahora
-            </Button>
+            <Link to="/contact">
+              <Button 
+                variant="outline"
+                size="lg"
+                className="bg-white/10 border-white text-white hover:bg-white hover:text-gray-900"
+              >
+                Contactar Ahora
+              </Button>
+            </Link>
           </motion.div>
         </div>
 
@@ -368,14 +300,16 @@ export const Home: React.FC = () => {
             transition={{ duration: 0.7, delay: 0.8 }}
             className="mt-12 text-center"
           >
-            <Button 
-              href="/tours"
-              variant="outline"
-              size="lg"
-              rightIcon={<ChevronRight />}
-            >
-              Ver Todos los Tours
-            </Button>
+            <Link to="/tours">
+              <Button 
+                variant="outline"
+                size="lg"
+                className="flex items-center gap-2"
+              >
+                Ver Todos los Tours
+                <ChevronRight className="w-5 h-5" />
+              </Button>
+            </Link>
           </motion.div>
         </div>
       </section>
@@ -440,13 +374,14 @@ export const Home: React.FC = () => {
               </div>
               
               <div className="mt-8">
-                <Button 
-                  href="/about"
-                  variant="primary"
-                  size="lg"
-                >
-                  Conoce Más Sobre Nosotros
-                </Button>
+                <Link to="/about">
+                  <Button 
+                    variant="primary"
+                    size="lg"
+                  >
+                    Conoce Más Sobre Nosotros
+                  </Button>
+                </Link>
               </div>
             </div>
             
@@ -610,23 +545,25 @@ export const Home: React.FC = () => {
               transition={{ duration: 0.7, delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Button 
-                href="/tours"
-                variant="primary"
-                size="xl"
-                className="bg-caribbean-500 hover:bg-caribbean-600"
-              >
-                Ver Excursiones
-              </Button>
+              <Link to="/tours">
+                <Button 
+                  variant="primary"
+                  size="lg"
+                  className="bg-caribbean-500 hover:bg-caribbean-600"
+                >
+                  Ver Excursiones
+                </Button>
+              </Link>
               
-              <Button 
-                href="/contact"
-                variant="outline"
-                size="xl"
-                className="border-white text-white hover:bg-white hover:text-gray-900"
-              >
-                Contactar
-              </Button>
+              <Link to="/contact">
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  className="border-white text-white hover:bg-white hover:text-gray-900"
+                >
+                  Contactar
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </div>

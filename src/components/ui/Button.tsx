@@ -1,124 +1,52 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'link';
-type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
-
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  fullWidth?: boolean;
-  href?: string;
-  external?: boolean;
-  className?: string;
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
   children: React.ReactNode;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  variant = 'primary',
-  size = 'md',
-  isLoading = false,
-  leftIcon,
-  rightIcon,
-  fullWidth = false,
-  href,
-  external = false,
-  className = '',
-  children,
+const Button: React.FC<ButtonProps> = ({ 
+  variant = 'primary', 
+  size = 'md', 
+  loading = false,
   disabled,
-  ...props
+  children, 
+  className = '',
+  ...props 
 }) => {
-  // Base classes
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
-  // Size classes
-  const sizeClasses = {
-    sm: 'text-xs px-3 py-1.5',
-    md: 'text-sm px-4 py-2',
-    lg: 'text-base px-6 py-3',
-    xl: 'text-lg px-8 py-4',
+  const variants = {
+    primary: 'bg-caribbean-600 text-white hover:bg-caribbean-700 focus:ring-caribbean-500 shadow-sm',
+    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm',
+    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500'
   };
   
-  // Variant classes
-  const variantClasses = {
-    primary: 'bg-caribbean-600 hover:bg-caribbean-700 text-white focus:ring-caribbean-500',
-    secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-900 focus:ring-gray-500',
-    outline: 'bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700 focus:ring-gray-500',
-    danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 focus:ring-gray-500',
-    link: 'bg-transparent text-caribbean-600 hover:text-caribbean-700 hover:underline p-0 focus:ring-0',
+  const sizes = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2 text-base',
+    lg: 'px-6 py-3 text-lg'
   };
   
-  // Width classes
-  const widthClasses = fullWidth ? 'w-full' : '';
-  
-  // Disabled classes
-  const disabledClasses = (disabled || isLoading) 
-    ? 'opacity-70 cursor-not-allowed pointer-events-none' 
-    : '';
-  
-  // Combine all classes
-  const buttonClasses = `
-    ${baseClasses} 
-    ${sizeClasses[size]} 
-    ${variantClasses[variant]} 
-    ${widthClasses} 
-    ${disabledClasses} 
-    ${className}
-  `;
-  
-  // Content with loading state and icons
-  const content = (
-    <>
-      {isLoading && (
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-      )}
-      {!isLoading && leftIcon && (
-        <span className="mr-2">{leftIcon}</span>
-      )}
-      {children}
-      {!isLoading && rightIcon && (
-        <span className="ml-2">{rightIcon}</span>
-      )}
-    </>
-  );
-  
-  // Render link or button
-  if (href) {
-    if (external) {
-      return (
-        <a 
-          href={href} 
-          className={buttonClasses}
-          target="_blank" 
-          rel="noopener noreferrer"
-        >
-          {content}
-        </a>
-      );
-    }
-    
-    return (
-      <Link 
-        to={href} 
-        className={buttonClasses}
-      >
-        {content}
-      </Link>
-    );
-  }
+  const isDisabled = disabled || loading;
   
   return (
-    <button 
-      className={buttonClasses}
-      disabled={disabled || isLoading}
+    <button
+      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
+      disabled={isDisabled}
       {...props}
     >
-      {content}
+      {loading && (
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      )}
+      {children}
     </button>
   );
 };
+
+export default Button;

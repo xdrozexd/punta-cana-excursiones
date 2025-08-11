@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, Users, MapPin, Calendar, CheckCircle, XCircle, Loader, Shield } from 'lucide-react';
+import { Star, Clock, MapPin, CheckCircle, XCircle, Shield, ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useData } from '../contexts/DataContext';
+import { useActivitySync } from '../hooks';
+import { GallerySkeleton } from '../components/ui/Skeleton';
+import Button from '../components/ui/Button';
 import axios from 'axios';
 
 interface TourParams {
@@ -13,93 +16,191 @@ interface TourParams {
 export const TourDetail: React.FC = () => {
   const { id } = useParams<TourParams>();
   const navigate = useNavigate();
-  const { activities, isLoading: isLoadingActivities } = useData();
-  const [tour, setTour] = useState<any | null>(null);
+  const { activities, isLoading: isLoadingActivities, error: contextError, refreshData } = useData();
+  const { forceRefresh } = useActivitySync();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+  const [lastTourId, setLastTourId] = useState<string | null>(null);
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
+  // Usar useMemo para calcular el tour actualizado automáticamente
+  const tour = useMemo(() => {
+    if (!activities.length || !id) return null;
+    
+    const foundTour = activities.find(activity => activity.id === id);
+    
+    if (!foundTour) return null;
+    
+    // Procesar las imágenes correctamente
+    let processedImages: string[] = [];
+    
+    if (foundTour.images && Array.isArray(foundTour.images) && foundTour.images.length > 0) {
+      processedImages = foundTour.images.filter(img => img && img.trim() !== '');
+    } else if (foundTour.imageUrl) {
+      processedImages = [foundTour.imageUrl];
+    } else {
+      processedImages = [
+        'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800',
+        'https://images.pexels.com/photos/2549018/pexels-photo-2549018.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800',
+        'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800'
+      ];
+    }
+    
+    // Asegurarse de que siempre haya al menos una imagen
+    if (processedImages.length === 0) {
+      processedImages = ['https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800'];
+    }
+    
+    // Procesar el itinerario
+    let processedItinerary: Array<{time: string; title: string; description: string}> = [
+      {
+        time: '9:00 AM',
+        title: 'Inicio de la actividad',
+        description: 'Recogida en el hotel y traslado al punto de inicio.'
+      },
+      {
+        time: '12:00 PM',
+        title: 'Almuerzo',
+        description: 'Tiempo para disfrutar de la gastronomía local.'
+      },
+      {
+        time: '4:00 PM',
+        title: 'Fin de la actividad',
+        description: 'Regreso al hotel.'
+      }
+    ];
+    
+    if (foundTour.itinerary) {
+      try {
+        // Si es un string JSON, parsearlo
+        if (typeof foundTour.itinerary === 'string') {
+          const parsed = JSON.parse(foundTour.itinerary);
+          if (Array.isArray(parsed)) {
+            processedItinerary = parsed.map(item => ({
+              time: item.time || 'TBD',
+              title: item.title || 'Actividad',
+              description: item.description || ''
+            }));
+          }
+        } else if (Array.isArray(foundTour.itinerary)) {
+          processedItinerary = foundTour.itinerary.map(item => ({
+            time: item.time || 'TBD',
+            title: item.title || 'Actividad',
+            description: item.description || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Error al procesar itinerario:', error);
+      }
+    }
+    
+    return {
+      id: foundTour.id,
+      title: foundTour.name || foundTour.title || 'Tour sin nombre',
+      description: foundTour.description || '',
+      shortDescription: foundTour.shortDescription || '',
+      price: foundTour.price || 0,
+      originalPrice: foundTour.originalPrice,
+      duration: typeof foundTour.duration === 'number' 
+        ? `${Math.floor(foundTour.duration / 60)} horas ${foundTour.duration % 60 > 0 ? `${foundTour.duration % 60} minutos` : ''}`
+        : foundTour.duration || 'Consultar',
+      rating: foundTour.rating || 4.5,
+      reviewCount: foundTour.reviews || foundTour.reviewCount || 0,
+      maxGuests: foundTour.capacity || foundTour.maxPeople || 10,
+      minAge: foundTour.minAge || 0,
+      location: foundTour.location || 'Punta Cana',
+      meetingPoint: foundTour.meetingPoint || '',
+      pickupIncluded: foundTour.pickupIncluded || false,
+      images: processedImages,
+      highlights: foundTour.highlights || [
+        'Transporte ida y vuelta desde tu hotel',
+        'Guía turístico profesional',
+        'Experiencia única en Punta Cana',
+        'Actividades para toda la familia'
+      ],
+      included: foundTour.included || [
+        'Transporte de ida y vuelta',
+        'Guía bilingüe',
+        'Seguro de viaje'
+      ],
+      excluded: foundTour.notIncluded || foundTour.excluded || [
+        'Propinas',
+        'Gastos personales'
+      ],
+      requirements: foundTour.requirements || [
+        'Ropa cómoda',
+        'Protector solar',
+        'Cámara fotográfica'
+      ],
+      tags: foundTour.tags || [],
+      languages: foundTour.languages || ['Español'],
+      availability: foundTour.availability || ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+      startTime: foundTour.startTime || ['9:00 AM'],
+      itinerary: processedItinerary
+    };
+  }, [id, activities]);
+
+  // Efecto para detectar cambios en el tour y forzar actualización
+  useEffect(() => {
+    if (tour && tour.id !== lastTourId) {
+      console.log('TourDetail: Tour actualizado detectado:', tour.title);
+      setLastTourId(tour.id);
+      setCurrentImageIndex(0);
+      setLoadedImages(new Set());
+    }
+  }, [tour, lastTourId]);
+
+  // Función para manejar actualización manual
+  const handleManualRefresh = async () => {
+    try {
+      await forceRefresh();
+      setShowUpdateNotification(true);
+      setTimeout(() => setShowUpdateNotification(false), 3000);
+    } catch (error) {
+      console.error('Error en actualización manual:', error);
+    }
+  };
+
+  // Efecto para actualización automática periódica (cada 30 segundos)
+  useEffect(() => {
+    if (!id) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        console.log('TourDetail: Actualización automática...');
+        await refreshData();
+      } catch (error) {
+        console.error('TourDetail: Error en actualización automática:', error);
+      }
+    }, 30000); // 30 segundos
+    
+    return () => clearInterval(interval);
+  }, [id, refreshData]);
+
+  // Efecto para manejar la carga inicial y errores
   useEffect(() => {
     const fetchTourDetails = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // Primero intentamos encontrar la actividad en el contexto
-        let foundTour = activities.find(activity => activity.id === id);
-        
-        // Si no está en el contexto, intentamos obtenerla directamente de la API
-        if (!foundTour && id) {
+        // Si no hay tour en el contexto pero hay ID, intentar obtenerlo de la API
+        if (!tour && id) {
+          console.log('TourDetail: Tour no encontrado en contexto, buscando en API...');
           const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
           const response = await axios.get(`${API_URL}/activities/${id}`);
-          foundTour = response.data;
-        }
-        
-        if (foundTour) {
-          // Adaptamos los datos para que funcionen con la estructura que espera el componente
-          const adaptedTour = {
-            id: foundTour.id,
-            title: foundTour.name || foundTour.title || 'Tour sin nombre',
-            description: foundTour.description || '',
-            price: foundTour.price || 0,
-            originalPrice: foundTour.originalPrice,
-            duration: typeof foundTour.duration === 'number' 
-              ? `${Math.floor(foundTour.duration / 60)} horas ${foundTour.duration % 60 > 0 ? `${foundTour.duration % 60} minutos` : ''}`
-              : foundTour.duration || 'Consultar',
-            rating: foundTour.rating || 4.5,
-            reviewCount: foundTour.reviews || foundTour.reviewCount || 0,
-            maxGuests: foundTour.capacity || foundTour.maxPeople || 10,
-            minAge: foundTour.minAge || 0,
-            location: foundTour.location || 'Punta Cana',
-            images: foundTour.images && foundTour.images.length > 0 
-              ? foundTour.images 
-              : foundTour.imageUrl 
-                ? [foundTour.imageUrl, foundTour.imageUrl, foundTour.imageUrl] 
-                : [
-      'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800',
-      'https://images.pexels.com/photos/2549018/pexels-photo-2549018.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800',
-      'https://images.pexels.com/photos/1320684/pexels-photo-1320684.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800'
-    ],
-            highlights: foundTour.highlights || [
-      'Transporte ida y vuelta desde tu hotel',
-              'Guía turístico profesional',
-              'Experiencia única en Punta Cana',
-              'Actividades para toda la familia'
-            ],
-            included: foundTour.included || [
-      'Transporte de ida y vuelta',
-      'Guía bilingüe',
-      'Seguro de viaje'
-    ],
-            excluded: foundTour.notIncluded || foundTour.excluded || [
-      'Propinas',
-              'Gastos personales'
-            ],
-            itinerary: foundTour.itinerary || [
-      {
-        time: '9:00 AM',
-                title: 'Inicio de la actividad',
-                description: 'Recogida en el hotel y traslado al punto de inicio.'
-      },
-      {
-        time: '12:00 PM',
-                title: 'Almuerzo',
-                description: 'Tiempo para disfrutar de la gastronomía local.'
-      },
-      {
-        time: '4:00 PM',
-                title: 'Fin de la actividad',
-                description: 'Regreso al hotel.'
-              }
-            ]
-          };
+          const foundTour = response.data;
           
-          setTour(adaptedTour);
-        } else {
-          setError('No se encontró la actividad solicitada');
-          // Redirigir después de 3 segundos
-          setTimeout(() => {
-            navigate('/tours');
-          }, 3000);
+          if (foundTour) {
+            console.log('TourDetail: Tour encontrado en API, refrescando contexto...');
+            await refreshData();
+          } else {
+            setError('No se encontró la actividad solicitada');
+            setTimeout(() => navigate('/tours'), 3000);
+          }
         }
       } catch (err) {
         console.error('Error al obtener detalles del tour:', err);
@@ -110,47 +211,147 @@ export const TourDetail: React.FC = () => {
     };
 
     fetchTourDetails();
-  }, [id, activities, navigate]);
+  }, [id, navigate, refreshData]); // Removido 'tour' de las dependencias para evitar loops
 
-  // Si está cargando, mostrar indicador de carga
-  if (isLoading || isLoadingActivities) {
-  return (
+  // Efecto adicional para detectar cambios en las actividades y forzar actualización
+  useEffect(() => {
+    console.log('TourDetail: Actividades actualizadas, verificando tour...');
+    if (activities.length > 0 && id) {
+      const foundTour = activities.find(activity => activity.id === id);
+      if (foundTour) {
+        console.log('TourDetail: Tour encontrado en actividades actualizadas:', foundTour.name);
+        // Forzar actualización si el tour ha cambiado
+        if (lastTourId !== foundTour.id) {
+          console.log('TourDetail: Cambio detectado, actualizando...');
+          setLastTourId(foundTour.id);
+        }
+      } else {
+        console.log('TourDetail: Tour no encontrado en actividades actualizadas');
+      }
+    }
+  }, [activities, id, lastTourId]);
+
+  // Resetear el índice de imagen cuando cambie el tour
+  useEffect(() => {
+    if (tour) {
+      setCurrentImageIndex(0);
+      setLoadedImages(new Set());
+    }
+  }, [tour?.id]);
+
+  // Funciones para la galería de imágenes con useCallback
+  const nextImage = useCallback(() => {
+    if (!tour?.images?.length) return;
+    setCurrentImageIndex(prev => 
+      prev === tour.images.length - 1 ? 0 : prev + 1
+    );
+  }, [tour?.images?.length]);
+
+  const prevImage = useCallback(() => {
+    if (!tour?.images?.length) return;
+    setCurrentImageIndex(prev => 
+      prev === 0 ? tour.images.length - 1 : prev - 1
+    );
+  }, [tour?.images?.length]);
+
+  const openLightbox = useCallback((index: number) => {
+    setCurrentImageIndex(index);
+    setShowLightbox(true);
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setShowLightbox(false);
+  }, []);
+
+  const handleImageLoad = useCallback((index: number) => {
+    setLoadedImages(prev => new Set([...prev, index]));
+  }, []);
+
+  const handleImageClick = useCallback((index: number) => {
+    setCurrentImageIndex(index);
+  }, []);
+
+  // Early return si no hay ID
+  if (!id) {
+    return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-sky-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700">Cargando detalles del tour...</h2>
+          <p className="text-gray-600 mb-4">ID de tour no válido</p>
+          <Link to="/tours" className="text-caribbean-600 hover:text-caribbean-700 underline">
+            Volver a Tours
+          </Link>
         </div>
-          </div>
+      </div>
     );
   }
 
-  // Si hay un error, mostrar mensaje de error
-  if (error || !tour) {
+  // Early returns para estados de carga y error
+  if (isLoading || isLoadingActivities) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container-custom py-8">
+          <GallerySkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || contextError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-md">
-          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error || 'No se pudo cargar la actividad'}</p>
-          <p className="text-gray-500 text-sm mb-4">Serás redirigido a la página de tours en unos segundos...</p>
-          <Link to="/tours" className="btn-primary inline-block">
-            Volver a Tours
-          </Link>
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+            <p className="font-bold">Error</p>
+            <p>{error || contextError}</p>
+          </div>
+          <div className="space-y-2">
+            <Button onClick={() => window.location.reload()} variant="primary">
+              Reintentar
+            </Button>
+            <div>
+              <Link to="/tours" className="text-caribbean-600 hover:text-caribbean-700 underline">
+                Volver a Tours
+              </Link>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!tour) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <p className="text-gray-600 mb-4">No se encontró el tour solicitado</p>
+          <Link to="/tours" className="text-caribbean-600 hover:text-caribbean-700 underline">
+            Volver a Tours
+          </Link>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header con información del tour - Estilo moderno */}
+      {/* Notificación de actualización */}
+      {showUpdateNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <CheckCircle className="w-5 h-5" />
+            <span>Datos actualizados correctamente</span>
+          </div>
+        </div>
+      )}
+
+      {/* Header con información del tour */}
       <div className="bg-gradient-to-r from-indigo-600 to-blue-700 text-white">
         <div className="container-custom py-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="h-20 w-20 rounded-full overflow-hidden mr-6 border-2 border-white shadow-lg">
                 <ImageWithFallback
-                  src={tour.images[0]}
+                  src={tour.images[0]} 
                   alt={tour.title}
                   className="h-full w-full object-cover"
                   width={80}
@@ -176,300 +377,341 @@ export const TourDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-blue-100 mb-1">Precio por persona</div>
-              <div className="text-3xl font-bold">${tour.price}</div>
-              <div className="text-sm text-blue-100 mt-1">Reserva con depósito del 50%</div>
+            
+            <div className="flex flex-col items-end space-y-2">
+              <div className="text-right">
+                <div className="text-3xl font-bold mb-2">${tour.price}</div>
+                {tour.originalPrice && tour.originalPrice > tour.price && (
+                  <div className="text-lg line-through opacity-75">${tour.originalPrice}</div>
+                )}
+                <div className="text-sm opacity-90">por persona</div>
+              </div>
+              
+              {/* Botón de actualización manual */}
+              <Button
+                onClick={handleManualRefresh}
+                variant="ghost"
+                size="sm"
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
+              >
+                Actualizar datos
+              </Button>
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Image Gallery - Diseño moderno */}
-      <section className="relative">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-72 md:h-[400px] p-4">
-          <div className="md:col-span-2">
-            <ImageWithFallback
-              src={tour.images[0]} 
-              alt={tour.title}
-              className="w-full h-full object-cover rounded-xl shadow-lg"
-              width={800}
-              height={500}
-            />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
-            <ImageWithFallback
-              src={tour.images[1]} 
-              alt={tour.title}
-              className="w-full h-full object-cover rounded-xl shadow-lg"
-              width={400}
-              height={250}
-            />
-            <ImageWithFallback
-              src={tour.images[2]} 
-              alt={tour.title}
-              className="w-full h-full object-cover rounded-xl shadow-lg"
-              width={400}
-              height={250}
-            />
-          </div>
-        </div>
-      </section>
 
       <div className="container-custom py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Descripción */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Descripción del Tour</h3>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-700 leading-relaxed">{tour.description}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna principal */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Galería de Imágenes Optimizada */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="relative">
+                {/* Imagen principal con lazy loading */}
+                <div className="relative h-96 md:h-[500px] overflow-hidden">
+                  <ImageWithFallback
+                    src={tour.images}
+                    alt={`${tour.title} - Imagen ${currentImageIndex + 1}`}
+                    className={`w-full h-full object-cover transition-transform duration-500 hover:scale-105 ${
+                      loadedImages.has(currentImageIndex) ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    onLoad={() => handleImageLoad(currentImageIndex)}
+                    currentIndex={currentImageIndex}
+                  />
+                  
+                  {/* Skeleton mientras carga */}
+                  {!loadedImages.has(currentImageIndex) && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                  )}
+                  
+                  {/* Overlay con controles */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all duration-300">
+                    <div className="absolute top-4 right-4">
+                      <Button
+                        onClick={() => openLightbox(currentImageIndex)}
+                        variant="ghost"
+                        size="sm"
+                        className="bg-white/90 backdrop-blur-sm hover:bg-white"
+                      >
+                        <Maximize2 className="w-5 h-5" />
+                      </Button>
+                    </div>
+                    
+                    {/* Controles de navegación */}
+                    {tour.images.length > 1 && (
+                      <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between">
+                        <Button
+                          onClick={prevImage}
+                          variant="ghost"
+                          size="sm"
+                          className="bg-white/90 backdrop-blur-sm hover:bg-white"
+                        >
+                          <ChevronLeft className="w-6 h-6" />
+                        </Button>
+                        <Button
+                          onClick={nextImage}
+                          variant="ghost"
+                          size="sm"
+                          className="bg-white/90 backdrop-blur-sm hover:bg-white"
+                        >
+                          <ChevronRight className="w-6 h-6" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Indicador de imagen actual */}
+                  {tour.images.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                      <div className="bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm">
+                        {currentImageIndex + 1} / {tour.images.length}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Miniaturas optimizadas */}
+                {tour.images.length > 1 && (
+                  <div className="p-4 bg-gray-50">
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {tour.images.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleImageClick(index)}
+                          className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                            index === currentImageIndex 
+                              ? 'border-caribbean-500 shadow-lg' 
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <ImageWithFallback
+                            src={[image]}
+                            alt={`Miniatura ${index + 1}`}
+                            className="w-full h-full object-cover"
+                            onLoad={() => handleImageLoad(index)}
+                            currentIndex={0}
+                          />
+                          {!loadedImages.has(index) && (
+                            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Tour Info - Diseño moderno */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Información del Tour</h3>
+            {/* Descripción */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Descripción</h2>
+              <div className="prose prose-lg max-w-none">
+                <p className="text-gray-700 leading-relaxed mb-6">{tour.description}</p>
+                
+                {tour.shortDescription && (
+                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg mb-6">
+                    <p className="text-blue-800 font-medium">{tour.shortDescription}</p>
+                  </div>
+                )}
               </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <div className="flex items-center mb-2">
-                      <Clock className="w-5 h-5 text-indigo-600 mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Duración</span>
+            </div>
+
+            {/* Puntos Destacados */}
+            {tour.highlights && tour.highlights.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <Star className="w-6 h-6 text-yellow-500 mr-3" />
+                  Puntos Destacados
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {tour.highlights.map((highlight, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-caribbean-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-gray-700">{highlight}</p>
                     </div>
-                    <div className="font-semibold text-gray-900">{tour.duration}</div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <div className="flex items-center mb-2">
-                      <Users className="w-5 h-5 text-indigo-600 mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Grupo máximo</span>
-                    </div>
-                    <div className="font-semibold text-gray-900">{tour.maxGuests} personas</div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <div className="flex items-center mb-2">
-                      <Calendar className="w-5 h-5 text-indigo-600 mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Edad mínima</span>
-                    </div>
-                    <div className="font-semibold text-gray-900">{tour.minAge} años</div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                    <div className="flex items-center mb-2">
-                      <MapPin className="w-5 h-5 text-indigo-600 mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Recogida</span>
-                    </div>
-                    <div className="font-semibold text-gray-900">Hotel incluida</div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Highlights - Diseño moderno */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                  Lo Más Destacado
-                </h3>
-              </div>
-              <div className="p-6">
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {tour.highlights.map((highlight: string, index: number) => (
-                    <li key={index} className="flex items-start space-x-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{highlight}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Itinerary - Diseño moderno */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Clock className="w-5 h-5 text-indigo-600 mr-2" />
-                  Itinerario Detallado
-                </h3>
-              </div>
-              <div className="p-6">
+            {/* Itinerario */}
+            {tour.itinerary && tour.itinerary.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Itinerario</h2>
                 <div className="space-y-6">
-                  {tour.itinerary.map((item: any, index: number) => (
+                  {tour.itinerary.map((item, index) => (
                     <div key={index} className="flex space-x-4">
                       <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center border-2 border-indigo-200">
-                          <span className="font-semibold text-indigo-600 text-sm">{item.time}</span>
+                        <div className="w-12 h-12 bg-caribbean-100 rounded-full flex items-center justify-center">
+                          <span className="text-caribbean-600 font-semibold text-sm">{item.time}</span>
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-2">{item.title}</h4>
+                        <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
                         <p className="text-gray-600">{item.description}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* Included/Excluded - Diseño moderno */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b">
-                  <h3 className="text-lg font-semibold text-green-700 flex items-center">
-                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                    Incluido
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <ul className="space-y-3">
-                    {tour.included.map((item: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b">
-                  <h3 className="text-lg font-semibold text-red-700 flex items-center">
-                    <XCircle className="w-5 h-5 text-red-600 mr-2" />
-                    No Incluido
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <ul className="space-y-3">
-                    {tour.excluded.map((item: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-3">
-                        <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Booking Sidebar - Diseño moderno */}
-          <div className="lg:col-span-4">
-            <div className="sticky top-4">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-indigo-600 to-blue-700 text-white py-4 px-6">
-                  <h3 className="text-lg font-semibold">Reservar Ahora</h3>
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Información del Tour */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Información del Tour</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Duración</span>
+                  <span className="font-semibold">{tour.duration}</span>
                 </div>
-                
-                <div className="p-6">
-                  {/* Precio */}
-                  <div className="mb-6">
-                    <div className="flex items-baseline space-x-2 mb-2">
-                      <span className="text-3xl font-bold text-indigo-600">${tour.price}</span>
-                      <span className="text-sm text-gray-500">/persona</span>
-                      {tour.originalPrice && (
-                        <span className="text-lg text-gray-400 line-through">${tour.originalPrice}</span>
-                      )}
-                    </div>
-                    {tour.originalPrice && (
-                      <div className="text-sm text-green-600 font-medium bg-green-50 p-2 rounded">
-                        ¡Ahorra ${tour.originalPrice - tour.price}!
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Formulario de reserva */}
-                  <form className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Fecha del Tour</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Calendar className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input 
-                          type="date" 
-                          className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                          min={new Date().toISOString().split('T')[0]}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Número de Personas</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Users className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <select className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                          <option value="1">1 persona</option>
-                          <option value="2">2 personas</option>
-                          <option value="3">3 personas</option>
-                          <option value="4">4 personas</option>
-                          <option value="5">5 personas</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Resumen de precio */}
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                      <div className="flex justify-between items-center mb-2 text-sm">
-                        <span className="text-gray-600">Precio por persona</span>
-                        <span className="font-medium">${tour.price}</span>
-                      </div>
-                      <div className="flex justify-between items-center mb-2 text-sm">
-                        <span className="text-gray-600">Personas</span>
-                        <span className="font-medium">1</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                        <span className="font-semibold text-gray-900">Total</span>
-                        <span className="text-lg font-bold text-indigo-600">${tour.price}</span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-2">
-                        * Depósito del 50% para confirmar
-                      </div>
-                    </div>
-
-                    {/* Botón de reserva */}
-                    <Link 
-                      to={`/booking/${tour.id}`} 
-                      className="w-full bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg text-center block transition duration-200 shadow-md"
-                    >
-                      Reservar Ahora
-                    </Link>
-                  </form>
-
-                  {/* Badges de confianza */}
-                  <div className="mt-6 space-y-3">
-                    <div className="flex items-center justify-center space-x-4 text-xs text-gray-600">
-                      <div className="flex items-center">
-                        <Shield className="w-4 h-4 text-green-500 mr-1" />
-                        <span>Pago Seguro</span>
-                      </div>
-                      <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Confirmación Inmediata</span>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500">
-                        ✓ Cancelación gratuita hasta 24h antes
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Capacidad máxima</span>
+                  <span className="font-semibold">{tour.maxGuests} personas</span>
                 </div>
+                {tour.minAge > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Edad mínima</span>
+                    <span className="font-semibold">{tour.minAge} años</span>
+                  </div>
+                )}
+                {tour.meetingPoint && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Punto de encuentro</span>
+                    <span className="font-semibold text-sm">{tour.meetingPoint}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Incluye recogida</span>
+                  <span className={`font-semibold ${tour.pickupIncluded ? 'text-green-600' : 'text-red-600'}`}>
+                    {tour.pickupIncluded ? 'Sí' : 'No'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lo que está Incluido */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                Lo que está Incluido
+              </h3>
+              <ul className="space-y-2">
+                {tour.included.map((item, index) => (
+                  <li key={index} className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-gray-700">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Lo que NO está Incluido */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                <XCircle className="w-5 h-5 text-red-600 mr-2" />
+                Lo que NO está Incluido
+              </h3>
+              <ul className="space-y-2">
+                {tour.excluded.map((item, index) => (
+                  <li key={index} className="flex items-center space-x-2">
+                    <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span className="text-gray-700">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Requisitos */}
+            {tour.requirements && tour.requirements.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Shield className="w-5 h-5 text-blue-600 mr-2" />
+                  Requisitos
+                </h3>
+                <ul className="space-y-2">
+                  {tour.requirements.map((item, index) => (
+                    <li key={index} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                      <span className="text-gray-700">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Botón de Reserva */}
+            <div className="bg-gradient-to-r from-caribbean-500 to-caribbean-600 rounded-2xl shadow-lg p-6 text-white">
+              <div className="text-center">
+                <h3 className="text-xl font-bold mb-2">¿Te interesa este tour?</h3>
+                <p className="text-caribbean-100 mb-4">Reserva ahora y asegura tu lugar</p>
+                <Link
+                  to={`/booking/${tour.id}`}
+                  className="inline-block bg-white text-caribbean-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors duration-200"
+                >
+                  Reservar Ahora
+                </Link>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Lightbox optimizado */}
+      {showLightbox && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center">
+          <div className="relative max-w-7xl max-h-full p-4">
+            <Button
+              onClick={closeLightbox}
+              variant="ghost"
+              size="sm"
+              className="absolute top-4 right-4 z-10 bg-white/20 backdrop-blur-sm hover:bg-white/30"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+            
+            <div className="relative">
+              <ImageWithFallback
+                src={tour.images[currentImageIndex]}
+                alt={`${tour.title} - Imagen ${currentImageIndex + 1}`}
+                className="max-w-full max-h-[80vh] object-contain"
+              />
+              
+              {tour.images.length > 1 && (
+                <>
+                  <Button
+                    onClick={prevImage}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                  >
+                    <ChevronLeft className="w-8 h-8" />
+                  </Button>
+                  <Button
+                    onClick={nextImage}
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30"
+                  >
+                    <ChevronRight className="w-8 h-8" />
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            {tour.images.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                <div className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded-full text-white">
+                  {currentImageIndex + 1} / {tour.images.length}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

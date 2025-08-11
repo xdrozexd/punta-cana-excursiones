@@ -13,7 +13,15 @@ import settingsRoutes from './routes/settings.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-export const prisma = new PrismaClient();
+
+// Configurar Prisma para usar PostgreSQL
+export const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "postgresql://postgres:roselito1234@localhost:5432/punta_cana_excursiones"
+    }
+  }
+});
 
 // Middleware
 app.use(cors());

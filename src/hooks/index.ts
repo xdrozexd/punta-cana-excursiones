@@ -9,6 +9,7 @@ import {
   getTourReviews 
 } from '../api';
 import type { TourFilters, ContactForm, BookingForm } from '../types';
+import { useData } from '../contexts/DataContext';
 
 // ==================== TOURS HOOKS ====================
 
@@ -101,7 +102,7 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
     }
   });
 
-  const setValue = useCallback((value: T | ((val: T) => T)) => {
+  const setValue = useCallback((value: T | ((_val: T) => T)) => {
     try {
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
@@ -292,7 +293,7 @@ export const useCopyToClipboard = () => {
  */
 export const useForm = <T extends Record<string, any>>(
   initialValues: T,
-  validationRules?: Partial<Record<keyof T, (value: any) => string | null>>
+  validationRules?: Partial<Record<keyof T, (_value: any) => string | null>>
 ) => {
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
@@ -384,4 +385,62 @@ export const useGeolocation = () => {
   }, []);
 
   return { location, error, loading, getCurrentLocation };
+};
+
+// Hook para sincronizar datos de actividades
+export const useActivitySync = () => {
+  const { activities, refreshData } = useData();
+  const lastUpdateRef = useRef<number>(0);
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Limpiar intervalo anterior
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    // Configurar actualización automática cada 30 segundos
+    intervalRef.current = setInterval(async () => {
+      try {
+        const now = Date.now();
+        // Solo actualizar si han pasado al menos 25 segundos desde la última actualización
+        if (now - lastUpdateRef.current > 25000) {
+          console.log('useActivitySync: Actualización automática...');
+          await refreshData();
+          lastUpdateRef.current = now;
+        }
+      } catch (error) {
+        console.error('useActivitySync: Error en actualización automática:', error);
+      }
+    }, 30000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [refreshData]);
+
+  // Función para forzar actualización manual
+  const forceRefresh = async () => {
+    try {
+      console.log('useActivitySync: Forzando actualización manual...');
+      await refreshData();
+      lastUpdateRef.current = Date.now();
+    } catch (error) {
+      console.error('useActivitySync: Error en actualización manual:', error);
+    }
+  };
+
+  // Obtener actividad específica si se proporciona ID
+  const getActivity = (id: string) => {
+    return activities.find(activity => activity.id === id);
+  };
+
+  return {
+    activities,
+    getActivity,
+    forceRefresh,
+    lastUpdate: lastUpdateRef.current
+  };
 };

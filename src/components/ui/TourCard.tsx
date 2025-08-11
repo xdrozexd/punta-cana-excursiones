@@ -45,8 +45,11 @@ export const TourCard: React.FC<TourCardProps> = ({
   const displayReviews = reviews || reviewCount || 0;
   const displayCapacity = capacity || maxPeople || 10;
   
+  // Usar descripción corta si está disponible, sino usar la descripción completa
+  const displayDescription = tour.shortDescription || description || 'Descubre esta increíble experiencia en el paraíso caribeño.';
+  
   // Mejorar el manejo de la duración para tours creados desde el dashboard
-  let displayDuration = '60 min';
+  let displayDuration = 'Consultar';
   if (duration) {
     if (typeof duration === 'number') {
       // Si es un número (minutos), convertirlo a formato legible
@@ -68,9 +71,6 @@ export const TourCard: React.FC<TourCardProps> = ({
   
   // Asegurar que la ubicación tenga un valor
   const displayLocation = location || 'Punta Cana, República Dominicana';
-  
-  // Asegurar que la descripción tenga un valor
-  const displayDescription = description || 'Descubre esta increíble experiencia en el paraíso caribeño.';
 
   if (featured) {
     return (
@@ -105,6 +105,8 @@ export const TourCard: React.FC<TourCardProps> = ({
                   ? 'bg-red-500 text-white shadow-lg' 
                   : 'bg-white/20 backdrop-blur-md text-white hover:bg-white/30'
               }`}
+              aria-label={isLiked ? "Quitar de favoritos" : "Agregar a favoritos"}
+              title={isLiked ? "Quitar de favoritos" : "Agregar a favoritos"}
             >
               <Heart className={`h-5 w-5 ${isLiked ? 'fill-current' : ''}`} />
             </button>
@@ -207,6 +209,8 @@ export const TourCard: React.FC<TourCardProps> = ({
                 ? 'bg-red-500 text-white shadow-lg' 
                 : 'bg-white/90 backdrop-blur-sm text-gray-600 hover:bg-white'
             }`}
+            aria-label={isLiked ? "Quitar de favoritos" : "Agregar a favoritos"}
+            title={isLiked ? "Quitar de favoritos" : "Agregar a favoritos"}
           >
             <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
           </button>
