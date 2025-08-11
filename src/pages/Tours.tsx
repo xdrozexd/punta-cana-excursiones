@@ -132,12 +132,13 @@ export const Tours: React.FC = () => {
               {/* Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredActivities.map((activity, index) => (
-                  <TourCard 
-                    key={activity.id} 
-                    tour={activity}
-                    featured={index === 0} // Primera actividad como destacada
-                    className="h-full"
-                  />
+                  <div key={activity.id} className="px-4 sm:px-6 w-full max-w-md sm:max-w-none mx-auto">
+                    <TourCard 
+                      tour={activity}
+                      featured={index === 0} // Primera actividad como destacada
+                      className="h-full"
+                    />
+                  </div>
                 ))}
               </div>
               

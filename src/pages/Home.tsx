@@ -263,7 +263,7 @@ export const Home: React.FC = () => {
             initial="hidden"
             animate={featuredInView ? "visible" : "hidden"}
             variants={staggerContainer}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {isLoading ? (
               <div className="col-span-full flex justify-center py-12">
@@ -281,6 +281,7 @@ export const Home: React.FC = () => {
                     key={tour.id}
                     variants={fadeInUp}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className="px-4 sm:px-6 w-full max-w-md sm:max-w-none mx-auto"
                   >
                     <TourCard tour={tour} />
                   </motion.div>

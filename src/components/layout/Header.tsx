@@ -76,7 +76,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 sm:gap-3">
-              <div className="w-11 h-11 sm:w-11 sm:h-11 lg:w-12 lg:h-12 flex items-center justify-center">
+              <div className="w-11 h-11 sm:w-11 sm:h-11 lg:w-12 lg:h-12 flex items-center justify-center mx-3 my-2 sm:mx-4 sm:my-3">
                 <img src={logoSvg} alt="Punta Cana Excursiones" className="w-full h-full object-contain" />
               </div>
               <div className="block">
