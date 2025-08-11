@@ -8,7 +8,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node seed.js",
-    "postinstall": "prisma generate --schema ../prisma/schema.prisma"
+    "postinstall": "prisma generate --schema ../prisma/schema.prisma",
+    "migrate": "prisma migrate deploy --schema ../prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.13.0",
