@@ -90,7 +90,8 @@ export const Footer: React.FC = () => {
               {[
                 { label: 'Inicio', path: '/' },
                 { label: 'Nuestros Tours', path: '/tours' },
-                { label: 'Acerca de Nosotros', path: '/about' },
+                { label: 'Sobre Nosotros', path: '/about' },
+                { label: 'Blog', path: '/blog' },
                 { label: 'Contacto', path: '/contact' },
                 { label: 'Términos y Condiciones', path: '/terms' },
                 { label: 'Política de Privacidad', path: '/privacy' }

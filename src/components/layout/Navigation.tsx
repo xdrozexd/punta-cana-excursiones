@@ -28,8 +28,18 @@ export const Navigation: React.FC<NavigationProps> = ({ mobile = false }) => {
         { label: 'Acuáticos', href: '/tours?category=acuaticos' },
       ]
     },
-    { label: 'Nosotros', href: '/about' },
     { label: 'Contacto', href: '/contact' },
+    { 
+      label: 'Sobre Nosotros', 
+      href: '/about',
+      children: [
+        { label: 'Quiénes Somos', href: '/about' },
+        { label: 'Términos y Condiciones', href: '/terms' },
+        { label: 'Política de Privacidad', href: '/privacy' },
+        { label: 'Preguntas Frecuentes (FAQ)', href: '/faq' },
+      ]
+    },
+    { label: 'Blog', href: '/blog' },
   ];
 
   const isActive = (href: string) => {

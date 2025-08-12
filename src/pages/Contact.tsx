@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Mail, MapPin, Clock, Send, MessageCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Send, MessageCircle, User } from 'lucide-react';
 
 export const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -96,139 +96,125 @@ export const Contact: React.FC = () => {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="relative">
-                    <label htmlFor="name" className="form-label">
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                       Nombre Completo *
                     </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="form-input pl-10"
-                      placeholder="Tu nombre completo"
-                      required
-                    />
-                    <div className="absolute inset-y-0 left-0 pt-6 pl-3 pointer-events-none text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                        placeholder="Tu nombre completo"
+                        required
+                      />
                     </div>
                   </div>
-                  <div className="relative">
-                    <label htmlFor="email" className="form-label">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                       Email *
                     </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="form-input pl-10"
-                      placeholder="tu@email.com"
-                      required
-                    />
-                    <div className="absolute inset-y-0 left-0 pt-6 pl-3 pointer-events-none text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                        placeholder="tu@email.com"
+                        required
+                      />
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="relative">
-                    <label htmlFor="phone" className="form-label">
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                       Teléfono
                     </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="form-input pl-10"
-                      placeholder="+1 (234) 567-8900"
-                    />
-                    <div className="absolute inset-y-0 left-0 pt-6 pl-3 pointer-events-none text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                        placeholder="+1 (234) 567-8900"
+                      />
                     </div>
                   </div>
-                  <div className="relative">
-                    <label htmlFor="tourInterest" className="form-label">
+                  <div className="space-y-2">
+                    <label htmlFor="tourInterest" className="block text-sm font-medium text-gray-700">
                       Tour de Interés
                     </label>
-                    <select
-                      id="tourInterest"
-                      name="tourInterest"
-                      value={formData.tourInterest}
-                      onChange={handleChange}
-                      className="form-input pl-10"
-                    >
-                      <option value="">Selecciona un tour</option>
-                      <option value="isla-saona">Isla Saona Completa</option>
-                      <option value="hoyo-azul">Hoyo Azul Adventure</option>
-                      <option value="safari-buggy">Safari Buggy</option>
-                      <option value="catamaran">Catamaran Party</option>
-                      <option value="zip-line">Zip Line Extreme</option>
-                      <option value="dolphins">Dolphin Encounter</option>
-                      <option value="personalizado">Tour Personalizado</option>
-                    </select>
-                    <div className="absolute inset-y-0 left-0 pt-6 pl-3 pointer-events-none text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <select
+                        id="tourInterest"
+                        name="tourInterest"
+                        value={formData.tourInterest}
+                        onChange={handleChange}
+                        className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                      >
+                        <option value="">Selecciona un tour</option>
+                        <option value="isla-saona">Isla Saona Completa</option>
+                        <option value="hoyo-azul">Hoyo Azul Adventure</option>
+                        <option value="safari-buggy">Safari Buggy</option>
+                        <option value="catamaran">Catamaran Party</option>
+                        <option value="zip-line">Zip Line Extreme</option>
+                        <option value="dolphins">Dolphin Encounter</option>
+                        <option value="personalizado">Tour Personalizado</option>
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                <div className="relative">
-                  <label htmlFor="subject" className="form-label">
+                <div className="space-y-2">
+                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700">
                     Asunto *
                   </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    className="form-input pl-10"
-                    placeholder="¿En qué podemos ayudarte?"
-                    required
-                  />
-                  <div className="absolute inset-y-0 left-0 pt-6 pl-3 pointer-events-none text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                  <div className="relative">
+                    <MessageCircle className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleChange}
+                      className="w-full pl-9 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                      placeholder="¿En qué podemos ayudarte?"
+                      required
+                    />
                   </div>
                 </div>
 
-                <div className="relative">
-                  <label htmlFor="message" className="form-label">
+                <div className="space-y-2">
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700">
                     Mensaje *
                   </label>
                   <div className="relative">
+                    <MessageCircle className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
                     <textarea
                       id="message"
                       name="message"
                       value={formData.message}
                       onChange={handleChange}
                       rows={6}
-                      className="form-input resize-none pl-10 pt-10"
+                      className="w-full pl-9 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300 resize-none"
                       placeholder="Cuéntanos sobre tu viaje ideal, fechas preferidas, número de personas, necesidades especiales, etc."
                       required
                     ></textarea>
-                    <div className="absolute top-3 left-3 pointer-events-none text-gray-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                      </svg>
-                    </div>
                   </div>
-                  <div className="text-right mt-2">
+                  <div className="text-right">
                     <span className="text-xs text-gray-500">{formData.message.length} caracteres</span>
                   </div>
                 </div>

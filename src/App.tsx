@@ -6,6 +6,7 @@ import { AdminLayout } from './components/admin/AdminLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
+import { ScrollToTop } from './components/layout/ScrollToTop';
 
 // Import main website pages
 import { Home } from './pages/Home';
@@ -15,6 +16,11 @@ import { About } from './pages/About';
 import { Contact } from './pages/Contact';
 import { Booking } from './pages/Booking';
 import { NotFound } from './pages/NotFound';
+import { Terms } from './pages/Terms';
+import { Privacy } from './pages/Privacy';
+import { Blog } from './pages/Blog';
+import { BlogPost } from './pages/BlogPost';
+import { Faq } from './pages/Faq';
 
 // Import admin pages
 import Dashboard from './pages/admin/Dashboard';
@@ -37,15 +43,21 @@ function App() {
   return (
     <AuthProvider>
       <DataProvider>
+        <ScrollToTop />
         <Routes>
           {/* Main Website Routes */}
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/tours" element={<Layout><Tours /></Layout>} />
           <Route path="/tours/:id" element={<Layout><TourDetail /></Layout>} />
           <Route path="/about" element={<Layout><About /></Layout>} />
+          <Route path="/blog" element={<Layout><Blog /></Layout>} />
+          <Route path="/blog/:slug" element={<Layout><BlogPost /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
           <Route path="/booking" element={<Layout><Booking /></Layout>} />
           <Route path="/booking/:tourId" element={<Layout><Booking /></Layout>} />
+          <Route path="/terms" element={<Layout><Terms /></Layout>} />
+          <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
+          <Route path="/faq" element={<Layout><Faq /></Layout>} />
           
           {/* Admin Login */}
           <Route path="/admin/login" element={<Login />} />

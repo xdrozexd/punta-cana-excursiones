@@ -1,0 +1,16 @@
+-- AlterTable
+ALTER TABLE "public"."Activity" ADD COLUMN     "availability" TEXT[] DEFAULT ARRAY['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']::TEXT[],
+ADD COLUMN     "highlights" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "images" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "included" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "itinerary" JSONB,
+ADD COLUMN     "languages" TEXT[] DEFAULT ARRAY['Español']::TEXT[],
+ADD COLUMN     "meetingPoint" TEXT,
+ADD COLUMN     "minAge" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "notIncluded" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "originalPrice" DOUBLE PRECISION,
+ADD COLUMN     "pickupIncluded" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "requirements" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN     "shortDescription" TEXT,
+ADD COLUMN     "startTime" TEXT[] DEFAULT ARRAY['9:00 AM']::TEXT[],
+ADD COLUMN     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];

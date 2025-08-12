@@ -190,7 +190,8 @@ export const TourDetail: React.FC = () => {
         // Si no hay tour en el contexto pero hay ID, intentar obtenerlo de la API
         if (!tour && id) {
           console.log('TourDetail: Tour no encontrado en contexto, buscando en API...');
-          const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
+          const isDev = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
+          const API_URL = isDev ? '/api' : (((import.meta as any).env?.VITE_API_URL) || '/api');
           const response = await axios.get(`${API_URL}/activities/${id}`);
           const foundTour = response.data;
           

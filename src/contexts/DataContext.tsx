@@ -18,7 +18,10 @@ interface DataContextType {
 
 // API base URL
 // Use env when provided; otherwise default to relative '/api' so production calls same-domain API (works with Vercel API Routes or reverse proxy)
-const API_URL = (import.meta as any).env?.VITE_API_URL || '/api';
+// Preferir proxy de Vite en desarrollo para evitar puertos desalineados.
+// En producción usar VITE_API_URL si está definida; de lo contrario, fallback a '/api'.
+const isDev = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
+const API_URL = isDev ? '/api' : (((import.meta as any).env?.VITE_API_URL) || '/api');
 
 // Crear el contexto
 const DataContext = createContext<DataContextType | undefined>(undefined);
