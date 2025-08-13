@@ -30,6 +30,7 @@ import Login from './pages/admin/Login';
 // Import admin pages
 import Bookings from './pages/admin/Bookings';
 import Customers from './pages/admin/Customers';
+import BlogPosts from './pages/admin/BlogPosts';
 import Reports from './pages/admin/Reports';
 import Settings from './pages/admin/Settings';
 
@@ -69,6 +70,7 @@ function App() {
               <Route path="activities" element={<Activities />} />
               <Route path="bookings" element={<Bookings />} />
               <Route path="customers" element={<Customers />} />
+              <Route path="blog" element={<BlogPosts />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<Settings />} />
             </Route>

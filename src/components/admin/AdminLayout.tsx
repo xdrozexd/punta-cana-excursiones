@@ -12,7 +12,8 @@ import {
   LogOut,
   Bell,
   Search,
-  User
+  User,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -27,6 +28,7 @@ export const AdminLayout: React.FC = () => {
     { name: 'Actividades', href: '/admin/activities', icon: MapPin },
     { name: 'Reservas', href: '/admin/bookings', icon: Calendar },
     { name: 'Clientes', href: '/admin/customers', icon: Users },
+    { name: 'Blog', href: '/admin/blog', icon: FileText },
     { name: 'Reportes', href: '/admin/reports', icon: BarChart3 },
     { name: 'Configuración', href: '/admin/settings', icon: Settings },
   ];
@@ -63,6 +65,8 @@ export const AdminLayout: React.FC = () => {
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-1 text-gray-400 hover:text-gray-600"
+            aria-label="Cerrar menú lateral"
+            title="Cerrar menú lateral"
           >
             <X className="w-5 h-5" />
           </button>
@@ -124,6 +128,8 @@ export const AdminLayout: React.FC = () => {
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 text-gray-400 hover:text-gray-600"
+              aria-label="Abrir menú lateral"
+              title="Abrir menú lateral"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -143,6 +149,7 @@ export const AdminLayout: React.FC = () => {
                       alert('Búsqueda: ' + e.currentTarget.value);
                     }
                   }}
+                  aria-label="Buscar en el panel"
                 />
               </div>
             </div>
@@ -154,6 +161,8 @@ export const AdminLayout: React.FC = () => {
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
                   className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  aria-label="Abrir notificaciones"
+                  title="Abrir notificaciones"
                 >
                   <Bell className="w-5 h-5" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>

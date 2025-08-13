@@ -1,18 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, ArrowLeft } from 'lucide-react';
-import { getPostById } from '../data/blogPosts';
 
 export const BlogPost: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const post = slug ? getPostById(slug) : undefined;
+  const [post, setPost] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!post) {
+  const API_BASE = (typeof window !== 'undefined' && window.location.port && window.location.port !== '10000')
+    ? 'http://localhost:10000'
+    : '';
+
+  useEffect(() => {
+    const load = async () => {
+      if (!slug) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/api/blog-posts/slug/${slug}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || 'No se pudo cargar el artículo');
+        }
+        const data = await res.json();
+        setPost(data);
+      } catch (e: any) {
+        setError(e?.message || 'Error al cargar el artículo');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="container-custom py-12 lg:py-16 text-center text-gray-600">Cargando...</div>
+    );
+  }
+
+  if (error || !post) {
     return (
       <div className="container-custom py-12 lg:py-16">
         <div className="bg-white rounded-2xl shadow p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Artículo no encontrado</h1>
-          <p className="text-gray-600 mb-6">El contenido que buscas no está disponible.</p>
+          <p className="text-gray-600 mb-6">{error || 'El contenido que buscas no está disponible.'}</p>
           <Link to="/blog" className="btn-primary inline-flex items-center">
             <ArrowLeft className="w-4 h-4 mr-2" /> Volver al Blog
           </Link>
@@ -45,15 +79,17 @@ export const BlogPost: React.FC = () => {
 
       <div className="container-custom py-10 lg:py-14">
         <article className="bg-white rounded-2xl shadow overflow-hidden">
-          {post.image && (
+          {post.imageUrl && (
             <div className="h-72 w-full overflow-hidden">
-              <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+              <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
             </div>
           )}
           <div className="prose max-w-none p-6 lg:p-10">
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-              {post.content || post.excerpt}
-            </p>
+            {post.content ? (
+              <div className="prose" dangerouslySetInnerHTML={{ __html: post.content }} />
+            ) : (
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">{post.excerpt}</p>
+            )}
           </div>
         </article>
       </div>

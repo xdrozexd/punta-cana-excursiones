@@ -8,6 +8,7 @@ import bookingsRoutes from './routes/bookings.js';
 import customersRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import settingsRoutes from './routes/settings.js';
+import blogPostsRoutes from './routes/blog-posts.js';
 
 // Configuración
 dotenv.config();
@@ -40,6 +41,7 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/blog-posts', blogPostsRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
