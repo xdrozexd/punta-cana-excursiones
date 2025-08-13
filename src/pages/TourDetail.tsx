@@ -346,46 +346,45 @@ export const TourDetail: React.FC = () => {
       )}
 
       {/* Header con información del tour */}
-      <div className="bg-white text-gray-900 shadow-sm">
-        <div className="container-custom py-4">
-          <div className="flex flex-col space-y-4">
-            {/* Título y rating en una fila */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold">{tour.title}</h1>
-              <div className="flex items-center space-x-1 text-yellow-500">
-                <Star className="w-4 h-4 fill-current" />
-                <span className="text-sm font-medium text-gray-700">{tour.rating}</span>
-                <span className="text-xs text-gray-500">({tour.reviewCount} reseñas)</span>
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-700 text-white">
+        <div className="container-custom py-8">
+          <div className="flex justify-between w-full">
+            {/* Columna izquierda - Título y detalles */}
+            <div className="flex-1 pr-4">
+              <h1 className="text-xl font-bold text-white mb-1">{tour.title}</h1>
+              <div className="flex items-center space-x-3 text-blue-100 text-sm">
+                <div className="flex items-center">
+                  <Star className="w-4 h-4 mr-1 fill-white text-white" />
+                  <span className="font-medium">{tour.rating}</span>
+                  <span className="opacity-75">({tour.reviewCount})</span>
+                </div>
+              </div>
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center text-blue-100 text-sm">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span>{tour.location}</span>
+                </div>
+                <div className="flex items-center text-blue-100 text-sm">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>{tour.duration}</span>
+                </div>
               </div>
             </div>
             
-            {/* Ubicación y duración en una fila */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
-              <div className="flex items-center space-x-1.5">
-                <MapPin className="w-3.5 h-3.5 text-gray-500" />
-                <span>{tour.location}</span>
-              </div>
-              <div className="flex items-center space-x-1.5">
-                <Clock className="w-3.5 h-3.5 text-gray-500" />
-                <span>{tour.duration}</span>
-              </div>
-            </div>
-            
-            {/* Precio y botón en una fila */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex flex-col">
-                <div className="text-2xl font-bold text-gray-900">${tour.price}</div>
+            {/* Columna derecha - Precio */}
+            <div className="flex flex-col items-end justify-center">
+              <div className="text-right">
+                <div className="text-3xl font-bold text-white">${tour.price}</div>
                 {tour.originalPrice && tour.originalPrice > tour.price && (
-                  <div className="text-sm text-gray-500 line-through">${tour.originalPrice}</div>
+                  <div className="text-sm line-through text-blue-200">${tour.originalPrice}</div>
                 )}
-                <div className="text-xs text-gray-500">por persona</div>
+                <div className="text-xs text-blue-200 mt-0.5">por persona</div>
               </div>
-              
               <Button
                 onClick={handleManualRefresh}
                 variant="ghost"
                 size="sm"
-                className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 border border-blue-200 rounded-md"
+                className="mt-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white text-sm px-3 h-8"
               >
                 Actualizar datos
               </Button>
