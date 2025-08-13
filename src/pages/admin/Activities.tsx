@@ -136,26 +136,24 @@ const Activities = () => {
         originalPrice: activityData.originalPrice,
         minAge: activityData.minAge || 0,
         pickupIncluded: activityData.pickupIncluded || false,
-        itinerary: activityData.itinerary || [
-          {
-            time: '9:00 AM',
-            title: 'Inicio de la actividad',
-            description: 'Recogida en el hotel y traslado al punto de inicio.'
-          },
-          {
-            time: '12:00 PM',
-            title: 'Almuerzo',
-            description: 'Tiempo para disfrutar de la gastronomía local.'
-          },
-          {
-            time: '4:00 PM',
-            title: 'Fin de la actividad',
-            description: 'Regreso al hotel.'
-          }
-        ]
+        itinerary: activityData.itinerary || {
+          days: [
+            {
+              title: 'Día 1',
+              description: 'Descripción detallada del primer día',
+              activities: [
+                { time: '09:00 AM', title: 'Recogida en el hotel', description: 'Recogida en el lobby del hotel' },
+                { time: '10:00 AM', title: 'Llegada al destino', description: 'Bienvenida y orientación' },
+                { time: '01:00 PM', title: 'Almuerzo', description: 'Almuerzo incluido en restaurante local' },
+                { time: '04:00 PM', title: 'Regreso', description: 'Regreso al hotel' }
+              ]
+            }
+          ]
+        }
       };
       
       console.log('Datos adaptados para enviar a la API:', adaptedData);
+      console.log('Itinerario específico que se va a guardar:', JSON.stringify(adaptedData.itinerary, null, 2));
       
     if (editingActivity) {
       // Actualizar actividad existente

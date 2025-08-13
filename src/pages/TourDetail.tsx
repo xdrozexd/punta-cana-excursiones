@@ -54,48 +54,131 @@ export const TourDetail: React.FC = () => {
       processedImages = ['https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=1200&h=800'];
     }
     
-    // Procesar el itinerario
-    let processedItinerary: Array<{time: string; title: string; description: string}> = [
-      {
-        time: '9:00 AM',
-        title: 'Inicio de la actividad',
-        description: 'Recogida en el hotel y traslado al punto de inicio.'
-      },
-      {
-        time: '12:00 PM',
-        title: 'Almuerzo',
-        description: 'Tiempo para disfrutar de la gastronomía local.'
-      },
-      {
-        time: '4:00 PM',
-        title: 'Fin de la actividad',
-        description: 'Regreso al hotel.'
-      }
-    ];
+    // Procesar el itinerario con el nuevo formato de días
+    let processedItinerary: {
+      days: Array<{
+        title: string;
+        description: string;
+        activities: Array<{time: string; title: string; description: string}>;
+      }>;
+    } | null = null;
+    
+    // Procesar el itinerario real de la base de datos
+    console.log('=== PROCESANDO ITINERARIO EN TOURDETAIL ===');
+    console.log('foundTour.itinerary:', foundTour.itinerary);
+    console.log('Tipo de itinerario:', typeof foundTour.itinerary);
     
     if (foundTour.itinerary) {
       try {
+        let parsedItinerary;
+        
         // Si es un string JSON, parsearlo
         if (typeof foundTour.itinerary === 'string') {
-          const parsed = JSON.parse(foundTour.itinerary);
-          if (Array.isArray(parsed)) {
-            processedItinerary = parsed.map(item => ({
-              time: item.time || 'TBD',
-              title: item.title || 'Actividad',
-              description: item.description || ''
-            }));
+          console.log('Parseando itinerario desde string JSON');
+          
+          // Estrategia robusta: intentar diferentes métodos de parsing
+          const jsonString = foundTour.itinerary;
+          
+          try {
+            // Método 1: Parsing directo
+            let firstParse = JSON.parse(jsonString);
+            console.log('Primer parsing exitoso, tipo:', typeof firstParse);
+            
+            // Si el primer parsing devuelve un string, necesitamos parsearlo otra vez (doble encoding)
+            if (typeof firstParse === 'string') {
+              console.log('Detectado doble encoding, parseando nuevamente');
+              parsedItinerary = JSON.parse(firstParse);
+              console.log('Segundo parsing exitoso, tipo:', typeof parsedItinerary);
+            } else {
+              parsedItinerary = firstParse;
+              console.log('Parsing directo exitoso, tipo:', typeof parsedItinerary);
+            }
+          } catch (error1) {
+            console.log('Parsing directo falló, intentando método alternativo');
+            try {
+              // Método 2: Evaluar como JavaScript (más seguro que eval)
+              parsedItinerary = Function('"use strict"; return (' + jsonString + ')')();
+              console.log('Parsing con Function exitoso');
+            } catch (error2) {
+              console.error('Todos los métodos de parsing fallaron:', error1, error2);
+              parsedItinerary = null;
+            }
           }
-        } else if (Array.isArray(foundTour.itinerary)) {
-          processedItinerary = foundTour.itinerary.map(item => ({
-            time: item.time || 'TBD',
-            title: item.title || 'Actividad',
-            description: item.description || ''
-          }));
+          
+          // Verificar si el resultado es válido
+          console.log('Validando resultado del parsing:');
+          console.log('- parsedItinerary existe?', !!parsedItinerary);
+          console.log('- typeof parsedItinerary:', typeof parsedItinerary);
+          console.log('- parsedItinerary es objeto?', typeof parsedItinerary === 'object');
+          console.log('- parsedItinerary completo:', parsedItinerary);
+          
+          if (parsedItinerary && typeof parsedItinerary === 'object') {
+            console.log('Itinerario parseado exitosamente');
+          } else {
+            console.log('Resultado de parsing no válido, usando null');
+            parsedItinerary = null;
+          }
+          
+        } else {
+          console.log('Usando itinerario como objeto');
+          parsedItinerary = foundTour.itinerary;
+        }
+        
+        console.log('Itinerario parseado:', parsedItinerary);
+        if (parsedItinerary) {
+          console.log('Tipo del itinerario parseado:', typeof parsedItinerary);
+          console.log('Es array?', Array.isArray(parsedItinerary));
+          console.log('Claves del objeto parseado:', Object.keys(parsedItinerary || {}));
+          console.log('Tiene propiedad days?', 'days' in parsedItinerary);
+          console.log('Valor de days:', parsedItinerary.days);
+        }
+        
+        // Verificar si tiene el nuevo formato con días
+        if (parsedItinerary && parsedItinerary.days && Array.isArray(parsedItinerary.days) && parsedItinerary.days.length > 0) {
+          console.log('Procesando itinerario con formato de días');
+          processedItinerary = {
+            days: parsedItinerary.days.map((day: any) => ({
+              title: day.title || 'Día',
+              description: day.description || '',
+              activities: (day.activities || []).map((activity: any) => ({
+                time: activity.time || 'TBD',
+                title: activity.title || 'Actividad',
+                description: activity.description || ''
+              }))
+            }))
+          };
+          console.log('Itinerario procesado correctamente:', processedItinerary);
+        } 
+        // Compatibilidad con formato antiguo (array simple)
+        else if (Array.isArray(parsedItinerary)) {
+          console.log('Convirtiendo formato antiguo de itinerario');
+          processedItinerary = {
+            days: [
+              {
+                title: 'Itinerario',
+                description: 'Actividades del tour',
+                activities: parsedItinerary.map((item: any) => ({
+                  time: item.time || 'TBD',
+                  title: item.title || 'Actividad',
+                  description: item.description || ''
+                }))
+              }
+            ]
+          };
+        } else {
+          console.log('Formato de itinerario no reconocido:', parsedItinerary);
+          console.log('parsedItinerary.days existe?', !!parsedItinerary?.days);
+          console.log('parsedItinerary.days es array?', Array.isArray(parsedItinerary?.days));
+          console.log('parsedItinerary.days.length:', parsedItinerary?.days?.length);
         }
       } catch (error) {
         console.error('Error al procesar itinerario:', error);
       }
+    } else {
+      console.log('No hay itinerario en foundTour');
     }
+    
+    console.log('Itinerario final a usar:', processedItinerary);
     
     return {
       id: foundTour.id,
@@ -528,20 +611,53 @@ export const TourDetail: React.FC = () => {
             )}
 
             {/* Itinerario */}
-            {tour.itinerary && tour.itinerary.length > 0 && (
+            {tour.itinerary && tour.itinerary.days && tour.itinerary.days.length > 0 && (
               <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Itinerario</h2>
-                <div className="space-y-6">
-                  {tour.itinerary.map((item, index) => (
-                    <div key={index} className="flex space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-caribbean-100 rounded-full flex items-center justify-center">
-                          <span className="text-caribbean-600 font-semibold text-sm">{item.time}</span>
-                        </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <Clock className="w-6 h-6 text-caribbean-600 mr-3" />
+                  Itinerario del Tour
+                </h2>
+                <div className="space-y-8">
+                  {tour.itinerary.days.map((day, dayIndex) => (
+                    <div key={dayIndex} className="border border-gray-200 rounded-xl overflow-hidden">
+                      {/* Encabezado del día */}
+                      <div className="bg-gradient-to-r from-caribbean-50 to-caribbean-100 px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-xl font-bold text-caribbean-800 mb-2">{day.title}</h3>
+                        {day.description && (
+                          <div 
+                            className="text-caribbean-700 prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{ __html: day.description }}
+                          />
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                        <p className="text-gray-600">{item.description}</p>
+                      
+                      {/* Actividades del día */}
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          {day.activities.map((activity, activityIndex) => (
+                            <div key={activityIndex} className="flex space-x-4 relative">
+                              {/* Línea conectora */}
+                              {activityIndex < day.activities.length - 1 && (
+                                <div className="absolute left-6 top-12 w-0.5 h-8 bg-gray-200"></div>
+                              )}
+                              
+                              {/* Hora */}
+                              <div className="flex-shrink-0">
+                                <div className="w-12 h-12 bg-caribbean-100 rounded-full flex items-center justify-center border-2 border-caribbean-200">
+                                  <span className="text-caribbean-700 font-semibold text-xs text-center leading-tight">
+                                    {activity.time}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Contenido de la actividad */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 mb-1">{activity.title}</h4>
+                                <p className="text-gray-600 text-sm leading-relaxed">{activity.description}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   ))}

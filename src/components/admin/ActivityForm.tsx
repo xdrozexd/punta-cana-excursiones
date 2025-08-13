@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { 
   X, 
@@ -13,11 +13,27 @@ import {
   Plus,
   Minus,
   Star,
-  Clock
+  Clock,
+  ListOrdered,
+  ListChecks,
+  Clock4,
+  MapPin as MapPinIcon
 } from 'lucide-react';
+
+// Importación dinámica para ReactQuill
+const ReactQuill = lazy(() => import('react-quill'));
+
+// Estilos para el editor
+import 'react-quill/dist/quill.snow.css';
 
 // Eliminamos la validación con zod que está causando problemas
 const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }) => {
+  // Log para depurar qué datos llegan al formulario
+  console.log('=== DATOS DE ACTIVIDAD RECIBIDOS EN EL FORMULARIO ===');
+  console.log('Activity completa:', activity);
+  console.log('Itinerario de la actividad:', activity?.itinerary);
+  console.log('Tipo del itinerario:', typeof activity?.itinerary);
+  
   const [formData, setFormData] = useState({
     title: activity?.title || activity?.name || '',
     description: activity?.description || '',
@@ -33,6 +49,63 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     active: activity?.active !== undefined ? activity.active : true,
     minAge: activity?.minAge || 0,
     pickupIncluded: activity?.pickupIncluded || false,
+    itinerary: (() => {
+      // Procesar el itinerario correctamente al inicializar
+      if (activity?.itinerary) {
+        try {
+          let parsedItinerary;
+          
+          // Si es string JSON, parsearlo
+          if (typeof activity.itinerary === 'string') {
+            parsedItinerary = JSON.parse(activity.itinerary);
+          } else {
+            parsedItinerary = activity.itinerary;
+          }
+          
+          // Verificar si tiene el formato correcto con días
+          if (parsedItinerary && parsedItinerary.days && Array.isArray(parsedItinerary.days)) {
+            console.log('Itinerario cargado correctamente:', parsedItinerary);
+            return parsedItinerary;
+          }
+          
+          // Si es array simple (formato antiguo), convertir al nuevo formato
+          if (Array.isArray(parsedItinerary)) {
+            console.log('Convirtiendo formato antiguo de itinerario');
+            return {
+              days: [
+                {
+                  title: 'Día 1',
+                  description: 'Actividades del tour',
+                  activities: parsedItinerary.map(item => ({
+                    time: item.time || 'TBD',
+                    title: item.title || 'Actividad',
+                    description: item.description || ''
+                  }))
+                }
+              ]
+            };
+          }
+        } catch (error) {
+          console.error('Error al procesar itinerario en inicialización:', error);
+        }
+      }
+      
+      // Valor por defecto si no hay itinerario o hay error
+      return {
+        days: [
+          {
+            title: 'Día 1',
+            description: 'Descripción detallada del primer día',
+            activities: [
+              { time: '09:00 AM', title: 'Recogida en el hotel', description: 'Recogida en el lobby del hotel' },
+              { time: '10:00 AM', title: 'Llegada al destino', description: 'Bienvenida y orientación' },
+              { time: '01:00 PM', title: 'Almuerzo', description: 'Almuerzo incluido en restaurante local' },
+              { time: '04:00 PM', title: 'Regreso', description: 'Regreso al hotel' }
+            ]
+          }
+        ]
+      };
+    })(),
   });
   
   const [images, setImages] = useState<string[]>(activity?.images || []);
@@ -238,8 +311,129 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     return Object.keys(newErrors).length === 0;
   };
 
+  // Módulos y configuraciones para ReactQuill
+  const modules = useMemo(() => ({
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  }), []);
+
+  // Agregar un nuevo día al itinerario
+  const addDay = () => {
+    console.log('Agregando nuevo día...', formData.itinerary);
+    
+    // Asegurar que itinerary y days existen
+    const currentItinerary = formData.itinerary || { days: [] };
+    const currentDays = currentItinerary.days || [];
+    
+    const newDay = {
+      title: `Día ${currentDays.length + 1}`,
+      description: '',
+      activities: [
+        { time: '09:00 AM', title: 'Nueva Actividad', description: 'Descripción de la nueva actividad' }
+      ]
+    };
+    
+    console.log('Nuevo día creado:', newDay);
+    
+    setFormData(prev => {
+      const updatedData = {
+        ...prev,
+        itinerary: {
+          ...currentItinerary,
+          days: [...currentDays, newDay]
+        }
+      };
+      console.log('Estado actualizado:', updatedData.itinerary);
+      return updatedData;
+    });
+  };
+
+  // Agregar una nueva actividad a un día
+  const addActivity = (dayIndex: number) => {
+    const updatedItinerary = { ...formData.itinerary };
+    updatedItinerary.days[dayIndex].activities.push({
+      time: '12:00 PM',
+      title: 'Nueva Actividad',
+      description: 'Descripción de la nueva actividad'
+    });
+    
+    setFormData(prev => ({
+      ...prev,
+      itinerary: updatedItinerary
+    }));
+  };
+
+  // Eliminar un día del itinerario
+  const removeDay = (dayIndex: number) => {
+    if (formData.itinerary.days.length <= 1) return;
+    
+    const updatedItinerary = { ...formData.itinerary };
+    updatedItinerary.days.splice(dayIndex, 1);
+    
+    // Renumerar los días restantes
+    updatedItinerary.days = updatedItinerary.days.map((day, idx) => ({
+      ...day,
+      title: `Día ${idx + 1}`
+    }));
+    
+    setFormData(prev => ({
+      ...prev,
+      itinerary: updatedItinerary
+    }));
+  };
+
+  // Eliminar una actividad de un día
+  const removeActivity = (dayIndex: number, activityIndex: number) => {
+    const updatedItinerary = { ...formData.itinerary };
+    updatedItinerary.days[dayIndex].activities.splice(activityIndex, 1);
+    
+    // Si no quedan actividades, agregar una por defecto
+    if (updatedItinerary.days[dayIndex].activities.length === 0) {
+      updatedItinerary.days[dayIndex].activities.push({
+        time: '09:00 AM',
+        title: 'Actividad',
+        description: 'Descripción de la actividad'
+      });
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      itinerary: updatedItinerary
+    }));
+  };
+
+  // Manejadores para el itinerario
+  const handleItineraryChange = (value: any, dayIndex: number, field: string, activityIndex?: number, subField?: string) => {
+    const updatedItinerary = { ...formData.itinerary };
+    
+    if (typeof activityIndex === 'number' && subField) {
+      // Actualizar una actividad específica
+      updatedItinerary.days[dayIndex].activities[activityIndex][subField] = value;
+    } else if (field === 'activities') {
+      // Actualizar la lista de actividades de un día
+      updatedItinerary.days[dayIndex].activities = value;
+    } else {
+      // Actualizar un campo del día (título o descripción)
+      updatedItinerary.days[dayIndex][field] = value;
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      itinerary: updatedItinerary
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('=== DATOS DEL FORMULARIO AL ENVIAR ===');
+    console.log('FormData completo:', formData);
+    console.log('Itinerario del formulario:', JSON.stringify(formData.itinerary, null, 2));
     
     if (!validateForm()) return;
     
@@ -919,6 +1113,137 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
             )}
           </div>
 
+          {/* Itinerario del Tour */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <ListOrdered className="mr-2 h-5 w-5 text-caribbean-600" />
+              Itinerario del Tour
+            </h3>
+            
+            {formData.itinerary?.days?.map((day, dayIndex) => (
+              <div key={dayIndex} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                  <h4 className="font-medium text-gray-900">{day.title}</h4>
+                  {formData.itinerary.days.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDay(dayIndex)}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Eliminar día
+                    </button>
+                  )}
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Título del día
+                    </label>
+                    <input
+                      type="text"
+                      value={day.title}
+                      onChange={(e) => handleItineraryChange(e.target.value, dayIndex, 'title')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-caribbean-500 focus:border-caribbean-500"
+                      placeholder="Ej: Día 1 - Llegada y City Tour"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Descripción del día
+                    </label>
+                    <div className="mb-4">
+                      <Suspense fallback={<div className="h-32 bg-gray-100 animate-pulse rounded-lg"></div>}>
+                        <ReactQuill
+                          value={day.description}
+                          onChange={(value) => handleItineraryChange(value, dayIndex, 'description')}
+                          modules={modules}
+                          theme="snow"
+                          className="bg-white rounded-lg"
+                          placeholder="Describe las actividades generales de este día..."
+                        />
+                      </Suspense>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium text-gray-700">Actividades del día</h5>
+                      <button
+                        type="button"
+                        onClick={() => addActivity(dayIndex)}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-caribbean-600 hover:bg-caribbean-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-caribbean-500"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Agregar Actividad
+                      </button>
+                    </div>
+                    
+                    {day.activities.map((activity, activityIndex) => (
+                      <div key={activityIndex} className="border border-gray-200 rounded-lg p-4 relative">
+                        <button
+                          type="button"
+                          onClick={() => removeActivity(dayIndex, activityIndex)}
+                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                          title="Eliminar actividad"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Hora</label>
+                            <input
+                              type="text"
+                              value={activity.time}
+                              onChange={(e) => handleItineraryChange(e.target.value, dayIndex, 'activities', activityIndex, 'time')}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-caribbean-500 focus:border-caribbean-500 text-sm"
+                              placeholder="09:00 AM"
+                            />
+                          </div>
+                          
+                          <div className="md:col-span-3">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Título</label>
+                            <input
+                              type="text"
+                              value={activity.title}
+                              onChange={(e) => handleItineraryChange(e.target.value, dayIndex, 'activities', activityIndex, 'title')}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-caribbean-500 focus:border-caribbean-500 text-sm"
+                              placeholder="Título de la actividad"
+                            />
+                          </div>
+                          
+                          <div className="md:col-span-7">
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
+                            <input
+                              type="text"
+                              value={activity.description}
+                              onChange={(e) => handleItineraryChange(e.target.value, dayIndex, 'activities', activityIndex, 'description')}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-caribbean-500 focus:border-caribbean-500 text-sm"
+                              placeholder="Descripción detallada de la actividad"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={addDay}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-caribbean-600 hover:bg-caribbean-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-caribbean-500"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Día al Itinerario
+              </button>
+            </div>
+          </div>
+          
           {/* Configuración de Estado */}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-6">
