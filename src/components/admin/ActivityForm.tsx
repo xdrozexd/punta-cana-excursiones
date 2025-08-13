@@ -14,10 +14,7 @@ import {
   Minus,
   Star,
   Clock,
-  ListOrdered,
-  ListChecks,
-  Clock4,
-  MapPin as MapPinIcon
+  ListOrdered
 } from 'lucide-react';
 
 // Importación dinámica para ReactQuill
@@ -376,7 +373,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
     updatedItinerary.days.splice(dayIndex, 1);
     
     // Renumerar los días restantes
-    updatedItinerary.days = updatedItinerary.days.map((day, idx) => ({
+    updatedItinerary.days = updatedItinerary.days.map((day: any, idx: number) => ({
       ...day,
       title: `Día ${idx + 1}`
     }));
@@ -1120,7 +1117,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
               Itinerario del Tour
             </h3>
             
-            {formData.itinerary?.days?.map((day, dayIndex) => (
+            {formData.itinerary?.days?.map((day: any, dayIndex: number) => (
               <div key={dayIndex} className="border border-gray-200 rounded-lg overflow-hidden">
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
                   <h4 className="font-medium text-gray-900">{day.title}</h4>
@@ -1180,7 +1177,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ activity, onSave, onClose }
                       </button>
                     </div>
                     
-                    {day.activities.map((activity, activityIndex) => (
+                    {day.activities.map((activity: any, activityIndex: number) => (
                       <div key={activityIndex} className="border border-gray-200 rounded-lg p-4 relative">
                         <button
                           type="button"
