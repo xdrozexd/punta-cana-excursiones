@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, MessageCircle, User } from 'lucide-react';
+import './Contact.css';
 
 export const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -315,14 +316,14 @@ export const Contact: React.FC = () => {
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="h-96 relative overflow-hidden rounded-t-xl">
               <iframe 
+                title="Ubicación de Punta Cana Excursiones en Google Maps"
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d242.5181963192026!2d-68.41151715106191!3d18.668297878582728!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8ea8909bc4ef968b%3A0xf89945c96f787b60!2sPlaza%20Brisas%2C%20Punta%20Cana%2023000%2C%20Dominikanische%20Republik!5e0!3m2!1sen!2sus!4v1659714050923!5m2!1sen!2sus" 
                 width="100%" 
                 height="100%" 
-                style={{ border: 0 }} 
                 allowFullScreen 
                 loading="lazy" 
                 referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0"
+                className="absolute inset-0 map-iframe"
               ></iframe>
               <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/20 to-transparent"></div>
               <div className="absolute bottom-4 left-4 bg-white p-2 rounded-md shadow-lg">

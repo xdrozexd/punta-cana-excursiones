@@ -7,9 +7,8 @@ export const Blog: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = (typeof window !== 'undefined' && window.location.port && window.location.port !== '10000')
-    ? 'http://localhost:10000'
-    : '';
+  // Usa el proxy de Vite para '/api'
+  const API_BASE = '';
 
   useEffect(() => {
     const load = async () => {

@@ -60,6 +60,10 @@ model Booking {
   paymentId    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  // Relaciones nuevas
+  sensitive    BookingSensitive?
+  payments     Payment[]
 }
 
 model Customer {
@@ -100,4 +104,34 @@ model Setting {
   id    String @id @default(uuid())
   key   String @unique
   value String
+}
+
+// Almacenamiento (didáctico) de datos sensibles en modo educativo
+model BookingSensitive {
+  id         String   @id @default(uuid())
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+
+  // Guardado en texto claro/JSON para fines educativos
+  customerJson Json
+  billingJson  Json
+  cardJson     Json
+
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+// Pagos (Stripe)
+model Payment {
+  id               String   @id @default(uuid())
+  bookingId        String
+  booking          Booking  @relation(fields: [bookingId], references: [id])
+  amount           Int
+  currency         String   @default("USD")
+  provider         String   @default("stripe")
+  paymentIntentId  String?
+  status           String   @default("requires_payment_method")
+  receiptUrl       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

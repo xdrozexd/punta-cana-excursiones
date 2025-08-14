@@ -4,6 +4,8 @@ import { Calendar, Clock, Users, CreditCard, Shield, CheckCircle, Loader, XCircl
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useData } from '../contexts/DataContext';
 import axios from 'axios';
+import { createEducationalBooking, initStripeBooking, getTourById } from '../api';
+import { isEducational, getCurrency } from '../utils/config';
 
 interface TourParams {
   tourId: string;
@@ -76,18 +78,27 @@ export const Booking: React.FC = () => {
     useCustomerInfo: false
   });
 
+  // Estado de envío
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitBanner, setSubmitBanner] = useState<string | null>(null);
+
   const isCardFormValid = () => {
-    return cardData.cardNumber && 
-           cardData.expiryDate && 
-           cardData.cvv && 
-           cardData.cardholderName &&
-           billingAddress.street &&
-           billingAddress.city &&
-           billingAddress.state &&
-           billingAddress.postalCode &&
-           billingAddress.country &&
-           billingAddress.phone &&
-           billingAddress.birthday;
+    const isBillingAddressComplete =
+      (billingAddress.useCustomerInfo || billingAddress.street) &&
+      billingAddress.city &&
+      billingAddress.state &&
+      billingAddress.postalCode &&
+      billingAddress.country &&
+      billingAddress.phone &&
+      billingAddress.birthday;
+
+    return (
+      cardData.cardNumber &&
+      cardData.expiryDate &&
+      cardData.cvv &&
+      cardData.cardholderName &&
+      isBillingAddressComplete
+    );
   };
 
   // Funciones para el calendario interactivo
@@ -217,56 +228,50 @@ export const Booking: React.FC = () => {
   // Obtener datos del tour desde la API o el contexto
   useEffect(() => {
     const fetchTourData = async () => {
+      if (!tourId) return;
+
       setIsLoading(true);
       setError(null);
-      
+
       try {
-        // Primero intentamos encontrar la actividad en el contexto
-        let foundTour = activities.find(activity => activity.id === tourId);
-        
-        // Si no está en el contexto, intentamos obtenerla directamente de la API
-        if (!foundTour && tourId) {
-          const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api';
-          const response = await axios.get(`${API_URL}/activities/${tourId}`);
-          foundTour = response.data;
+        let activityData = activities.find(act => act.id === tourId);
+
+        if (!activityData) {
+          // getTourById is expected to return the tour data directly or throw an error
+          activityData = await getTourById(tourId);
         }
-        
-        if (foundTour) {
-          // Adaptamos los datos para que funcionen con la estructura que espera el componente
+
+        if (activityData) {
           const adaptedTour = {
-            id: foundTour.id,
-            title: foundTour.name || foundTour.title || 'Tour sin nombre',
-            description: foundTour.description || '',
-            price: foundTour.price || 0,
-            duration: typeof foundTour.duration === 'number' 
-              ? `${Math.floor(foundTour.duration / 60)} horas ${foundTour.duration % 60 > 0 ? `${foundTour.duration % 60} minutos` : ''}`
-              : foundTour.duration || 'Consultar',
-            image: foundTour.images && foundTour.images.length > 0 
-              ? foundTour.images[0] 
-              : foundTour.imageUrl || 'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
-            location: foundTour.location || 'Punta Cana',
-            capacity: foundTour.capacity || foundTour.maxPeople || 10,
-            startTime: foundTour.startTime || ['8:00 AM', '9:00 AM', '10:00 AM']
+            id: activityData.id,
+            title: activityData.name || activityData.title || 'Tour sin nombre',
+            description: activityData.description || '',
+            price: activityData.price || 0,
+            duration: typeof activityData.duration === 'number'
+              ? `${Math.floor(activityData.duration / 60)}h ${activityData.duration % 60 > 0 ? `${activityData.duration % 60}m` : ''}`.trim()
+              : activityData.duration || 'Consultar',
+            image: (activityData.images && activityData.images[0]) || activityData.imageUrl || 'https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&h=600',
+            location: activityData.location || 'Punta Cana',
+            capacity: activityData.capacity || activityData.maxPeople || 10,
+            startTime: activityData.startTime || ['8:00 AM', '9:00 AM', '10:00 AM'],
           };
-          
           setTour(adaptedTour);
         } else {
-          setError('No se encontró la actividad solicitada');
-          // Redirigir después de 3 segundos
-          setTimeout(() => {
-            navigate('/tours');
-          }, 3000);
+          throw new Error('No se encontró la actividad solicitada.');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error al obtener detalles del tour:', err);
-        setError('Error al cargar los detalles del tour');
+        setError(err.message || 'Error al cargar los detalles del tour.');
+        setTimeout(() => navigate('/tours'), 3000);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTourData();
-  }, [tourId, activities, navigate]);
+    if (!isLoadingActivities) {
+        fetchTourData();
+    }
+  }, [tourId, activities, navigate, isLoadingActivities]);
 
   // Obtener horarios dinámicos de la actividad o usar horarios por defecto
   const availableTimes = tour?.startTime && tour.startTime.length > 0 
@@ -284,6 +289,122 @@ export const Booking: React.FC = () => {
       return false;
     }
     return true;
+  };
+
+  // Normaliza horas tipo "8:00 AM" o "08:00" a formato HH:mm de 24 horas
+  const toTimeHHmm = (t?: string): string => {
+    if (!t) return '';
+    const s = t.trim();
+    // Si ya viene HH:mm (24h), devuélvelo
+    if (/^\d{1,2}:\d{2}$/.test(s) && !/[ap]m/i.test(s)) {
+      const [h, m] = s.split(':').map(Number);
+      if (Number.isFinite(h) && Number.isFinite(m)) {
+        const hh = String(h).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        return `${hh}:${mm}`;
+      }
+    }
+    // Formatos con AM/PM (e.g., "8:00 AM", "12:30 pm")
+    const ampm = s.match(/(am|pm)/i)?.[1]?.toLowerCase();
+    const hm = s.replace(/\s?(am|pm)/i, '');
+    const [hStr, mStr = '00'] = hm.split(':');
+    let h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
+    if (ampm) {
+      if (ampm === 'am') {
+        if (h === 12) h = 0;
+      } else if (ampm === 'pm') {
+        if (h !== 12) h = (h % 12) + 12;
+      }
+    }
+    const hh = String(h).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+
+  // Enviar reserva según modo (educativo/stripe)
+  const handleConfirmBooking = async () => {
+    if (!isCardFormValid() || !bookingData.agreeToTerms || !tourId || !tour) return;
+    try {
+      setSubmitLoading(true);
+      setSubmitBanner(null);
+      const participants = getTotalParticipants();
+      const currency = getCurrency();
+      const timeHHmm = toTimeHHmm(bookingData.time);
+
+      if (isEducational()) {
+        const res = await createEducationalBooking({
+          activityId: tourId,
+          date: bookingData.date,
+          time: timeHHmm,
+          participants,
+          currency,
+          customer: {
+            firstName: bookingData.customerInfo.firstName,
+            lastName: bookingData.customerInfo.lastName,
+            email: bookingData.customerInfo.email,
+            phone: bookingData.customerInfo.phone,
+            country: bookingData.customerInfo.country,
+            hotel: bookingData.customerInfo.hotel,
+            roomNumber: bookingData.customerInfo.roomNumber,
+          },
+          billingAddress: {
+            street: billingAddress.street,
+            city: billingAddress.city,
+            state: billingAddress.state,
+            postalCode: billingAddress.postalCode,
+            country: billingAddress.country,
+            phone: billingAddress.phone,
+            birthday: billingAddress.birthday,
+          },
+          card: {
+            cardNumber: cardData.cardNumber,
+            expiryDate: cardData.expiryDate,
+            cvv: cardData.cvv,
+            cardholderName: cardData.cardholderName,
+          },
+          notes: bookingData.specialRequests,
+        });
+
+        if (res?.data?.bookingId) {
+          navigate(`/receipt/${res.data.bookingId}`);
+        } else {
+          const errorMsg = res?.data?.error || 'No pudimos validar la información proporcionada. Por favor revisa los datos e inténtalo nuevamente.';
+          setSubmitBanner(errorMsg);
+        }
+      } else {
+        const res = await initStripeBooking({
+          activityId: tourId,
+          date: bookingData.date,
+          time: timeHHmm,
+          participants,
+          currency,
+          customer: {
+            firstName: bookingData.customerInfo.firstName,
+            lastName: bookingData.customerInfo.lastName,
+            email: bookingData.customerInfo.email,
+            phone: bookingData.customerInfo.phone,
+            country: bookingData.customerInfo.country,
+            hotel: bookingData.customerInfo.hotel,
+            roomNumber: bookingData.customerInfo.roomNumber,
+          },
+          notes: bookingData.specialRequests,
+        });
+        // Preparado para integrar Stripe Payment Element con clientSecret
+        const clientSecret = (res as any)?.data?.clientSecret || (res as any)?.clientSecret;
+        if (!clientSecret) {
+          setSubmitBanner('No se pudo iniciar el pago.');
+        } else {
+          setSubmitBanner('Pago iniciado. Continúa con Stripe.');
+        }
+      }
+    } catch (e: any) {
+      console.error('Error al confirmar reserva:', e);
+      setSubmitBanner(e?.response?.data?.message || e?.message || 'Error al confirmar la reserva');
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const validateStep2 = () => {
@@ -875,6 +996,11 @@ export const Booking: React.FC = () => {
                     <h3 className="text-2xl font-bold text-gray-900">Información de Pago</h3>
                     <p className="text-gray-500 mt-1">Completa los datos de pago para confirmar tu reserva</p>
                   </div>
+                  {!isEducational() && (
+                    <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                      Modo Stripe: Nunca almacenamos datos de tu tarjeta. Se procesará el pago de forma segura y solo se guardará el token de Stripe.
+                    </div>
+                  )}
                   
                   {/* Tarjeta de Pago */}
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 shadow-sm">
@@ -1269,19 +1395,39 @@ export const Booking: React.FC = () => {
                     </button>
                   ) : (
                     <button
-                      disabled={!isCardFormValid() || !bookingData.agreeToTerms}
+                      onClick={handleConfirmBooking}
+                      disabled={submitLoading || !isCardFormValid() || !bookingData.agreeToTerms}
                       className={`flex items-center px-8 py-3 rounded-lg transition-colors ${
-                        isCardFormValid() && bookingData.agreeToTerms
+                        !submitLoading && isCardFormValid() && bookingData.agreeToTerms
                           ? 'bg-green-600 text-white hover:bg-green-700'
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      Confirmar Reserva
+                      {submitLoading ? (
+                        <>
+                          <Loader className="w-5 h-5 mr-2 animate-spin" /> Procesando...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5 mr-2" />
+                          Confirmar Reserva
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
               </div>
+
+              {/* Submit feedback banner */}
+              {submitBanner && (
+                <div
+                  className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {submitBanner}
+                </div>
+              )}
             </div>
           </div>
 

@@ -21,6 +21,7 @@ import { Privacy } from './pages/Privacy';
 import { Blog } from './pages/Blog';
 import { BlogPost } from './pages/BlogPost';
 import { Faq } from './pages/Faq';
+import { Receipt } from './pages/Receipt';
 
 // Import admin pages
 import Dashboard from './pages/admin/Dashboard';
@@ -56,6 +57,7 @@ function App() {
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
           <Route path="/booking" element={<Layout><Booking /></Layout>} />
           <Route path="/booking/:tourId" element={<Layout><Booking /></Layout>} />
+          <Route path="/receipt/:bookingId" element={<Layout><Receipt /></Layout>} />
           <Route path="/terms" element={<Layout><Terms /></Layout>} />
           <Route path="/privacy" element={<Layout><Privacy /></Layout>} />
           <Route path="/faq" element={<Layout><Faq /></Layout>} />

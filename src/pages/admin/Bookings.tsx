@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useData } from '../../contexts/DataContext';
 import { 
   Calendar, 
   Search, 
@@ -10,7 +11,8 @@ import {
   MapPin, 
   Eye, 
   Edit, 
-  Trash2 
+  Trash2, 
+  Save
 } from 'lucide-react';
 
 interface Booking {
@@ -25,6 +27,14 @@ interface Booking {
   status: 'confirmed' | 'pending' | 'cancelled';
   paymentMethod: string;
   location: string;
+  // Datos educativos (sensibles) enmascarados para UI
+  hasSensitive?: boolean;
+  sensitiveMasked?: {
+    customer?: any;
+    billing?: any;
+    card?: { brand?: string; last4?: string; exp?: string } | any;
+    notes?: string | null;
+  };
 }
 
 const Bookings: React.FC = () => {
@@ -32,88 +42,297 @@ const Bookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showSensitive, setShowSensitive] = useState<boolean>(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showStatusMenu, setShowStatusMenu] = useState<boolean>(false);
+  const statusMenuRef = useRef<HTMLDivElement | null>(null);
+  const [showNewBookingModal, setShowNewBookingModal] = useState<boolean>(false);
+  const [newForm, setNewForm] = useState<{ activityId: string; customerId: string; date: string; time: string; participants: number; status: 'pending' | 'confirmed' | 'cancelled' }>(
+    { activityId: '', customerId: '', date: '', time: '', participants: 1, status: 'pending' }
+  );
+  const [showEditBookingModal, setShowEditBookingModal] = useState<boolean>(false);
+  const [editBooking, setEditBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState<{ date: string; time: string; participants: number; status: 'confirmed' | 'pending' | 'cancelled' }>(
+    { date: '', time: '', participants: 1, status: 'pending' }
+  );
+
+  // API base URL aligned with DataContext: use relative '/api' so Vite proxy works in dev and same-domain in prod
+  const isDev = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
+  const API_BASE = isDev ? '/api' : (((import.meta as any).env?.VITE_API_URL) || '/api');
+  const { activities, customers } = useData();
   
-  // Datos de ejemplo
-  const bookings: Booking[] = [
-    {
-      id: 'BK-2023-001',
-      customerName: 'María García',
-      customerEmail: 'maria.garcia@email.com',
-      activityName: 'Isla Saona - Tour Completo',
-      date: '2023-12-15',
-      time: '08:00',
-      participants: 2,
-      amount: 178,
-      status: 'confirmed',
-      paymentMethod: 'Tarjeta de crédito',
-      location: 'Isla Saona'
-    },
-    {
-      id: 'BK-2023-002',
-      customerName: 'Carlos Rodríguez',
-      customerEmail: 'carlos.rodriguez@email.com',
-      activityName: 'Hoyo Azul y Scape Park',
-      date: '2023-12-18',
-      time: '09:30',
-      participants: 4,
-      amount: 500,
-      status: 'pending',
-      paymentMethod: 'PayPal',
-      location: 'Cap Cana'
-    },
-    {
-      id: 'BK-2023-003',
-      customerName: 'Ana López',
-      customerEmail: 'ana.lopez@email.com',
-      activityName: 'Catamarán Party',
-      date: '2023-12-20',
-      time: '10:00',
-      participants: 6,
-      amount: 570,
-      status: 'confirmed',
-      paymentMethod: 'Tarjeta de crédito',
-      location: 'Playa Bávaro'
-    },
-    {
-      id: 'BK-2023-004',
-      customerName: 'Roberto Silva',
-      customerEmail: 'roberto.silva@email.com',
-      activityName: 'Zip Line Adventure',
-      date: '2023-12-22',
-      time: '14:00',
-      participants: 3,
-      amount: 300,
-      status: 'cancelled',
-      paymentMethod: 'Efectivo',
-      location: 'Anamuya Mountains'
-    },
-    {
-      id: 'BK-2023-005',
-      customerName: 'Laura Martínez',
-      customerEmail: 'laura.martinez@email.com',
-      activityName: 'Safari Buggy',
-      date: '2023-12-25',
-      time: '09:00',
-      participants: 2,
-      amount: 130,
-      status: 'confirmed',
-      paymentMethod: 'Tarjeta de crédito',
-      location: 'Selva Tropical'
-    },
-    {
-      id: 'BK-2023-006',
-      customerName: 'Pedro Sánchez',
-      customerEmail: 'pedro.sanchez@email.com',
-      activityName: 'Dolphin Encounter',
-      date: '2023-12-28',
-      time: '11:30',
-      participants: 5,
-      amount: 600,
-      status: 'pending',
-      paymentMethod: 'Transferencia bancaria',
-      location: 'Ocean World'
+  // Helpers para enmascarar datos sensibles (educativo)
+  const maskCard = (card: any) => {
+    if (!card || typeof card !== 'object') return undefined;
+    const num = String(card.number || card.cardNumber || '');
+    const last4 = num && num.length >= 4 ? num.slice(-4) : undefined;
+    const brand = card.brand || card.type || undefined;
+    const exp = card.exp || (card.expMonth && card.expYear ? `${card.expMonth}/${card.expYear}` : undefined);
+    return { brand, last4, exp };
+  };
+
+  const maskSensitive = (s: any) => {
+    if (!s) return undefined;
+    return {
+      customer: s.customerJson,
+      billing: s.billingJson,
+      card: maskCard(s.cardJson),
+      notes: s.notes ?? null
+    };
+  };
+
+  // Utilidad para obtener JSON con detalles de error
+  const fetchJsonWithDetails = async (url: string, init?: RequestInit) => {
+    const res = await fetch(url, init);
+    let data: any = null;
+    let text = '';
+    try { data = await res.json(); }
+    catch {
+      try { text = await res.text(); } catch {}
     }
-  ];
+    return { ok: res.ok, status: res.status, statusText: res.statusText, data, text };
+  };
+
+  // Cargar reservas reales desde la API
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Primer intento
+        let { ok, status, statusText, data, text } = await fetchJsonWithDetails(`${API_BASE}/bookings`);
+        // Reintento simple ante fallo transitorio
+        if (!ok) {
+          await new Promise(r => setTimeout(r, 600));
+          ({ ok, status, statusText, data, text } = await fetchJsonWithDetails(`${API_BASE}/bookings`));
+        }
+        if (!ok) {
+          const serverMessage = (data?.message || data?.error || text || '').toString().trim();
+          const statusInfo = `${status || ''} ${statusText || ''}`.trim();
+          throw new Error([serverMessage, statusInfo].filter(Boolean).join(' | ') || 'No se pudieron cargar las reservas');
+        }
+        const mapped: Booking[] = (Array.isArray(data) ? data : []).map((b: any) => ({
+          id: b.id,
+          customerName: b?.customer?.name || '—',
+          customerEmail: b?.customer?.email || '—',
+          activityName: b?.activity?.name || '—',
+          date: b?.date ? new Date(b.date).toISOString().split('T')[0] : '—',
+          time: b?.date ? new Date(b.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          participants: b?.participants ?? 0,
+          amount: b?.totalPrice ?? 0,
+          status: (b?.status || 'pending'),
+          paymentMethod: b?.paymentMethod || '—',
+          location: b?.activity?.location || b?.activity?.place || 'Punta Cana',
+          hasSensitive: !!b?.sensitive,
+          sensitiveMasked: maskSensitive(b?.sensitive)
+        }));
+        setBookings(mapped);
+      } catch (e: any) {
+        setError(e?.message || 'Error al cargar reservas');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Al abrir el modal, autoseleccionar primer activity/customer si existen
+  useEffect(() => {
+    if (showNewBookingModal) {
+      setNewForm(prev => ({
+        ...prev,
+        activityId: prev.activityId || (activities?.[0]?.id || ''),
+        customerId: prev.customerId || (customers?.[0]?.id || ''),
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNewBookingModal, activities, customers]);
+
+  // Crear nueva reserva
+  const handleCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setActionLoading(true);
+      // Validaciones básicas
+      if (!newForm.activityId || !newForm.customerId) {
+        throw new Error('Selecciona una actividad y un cliente');
+      }
+      if (!newForm.date || !newForm.time) {
+        throw new Error('Ingresa fecha y hora');
+      }
+      if (!newForm.participants || newForm.participants < 1) {
+        throw new Error('El número de participantes debe ser al menos 1');
+      }
+      const isoDate = new Date(`${newForm.date}T${newForm.time}:00`).toISOString();
+      const selectedActivity: any = activities?.find((a: any) => a.id === newForm.activityId);
+      const unitPrice = selectedActivity ? Number(selectedActivity.price || 0) : 0;
+      const totalPrice = Number((unitPrice * Number(newForm.participants)).toFixed(2));
+      const payload = {
+        activityId: newForm.activityId,
+        customerId: newForm.customerId,
+        date: isoDate,
+        participants: newForm.participants,
+        status: newForm.status,
+        // opcional: enviar totalPrice si el backend lo admite
+        totalPrice,
+      };
+      // Log payload for debugging
+      console.log('Bookings: creando reserva con payload', payload);
+      const res = await fetch(`${API_BASE}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        // Try to extract meaningful server error
+        let serverMessage = '';
+        const raw = await res.text().catch(() => '');
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            serverMessage = parsed?.message || parsed?.error || JSON.stringify(parsed);
+          } catch {
+            serverMessage = raw;
+          }
+        }
+        const statusInfo = `${res.status || ''} ${res.statusText || ''}`.trim();
+        throw new Error([serverMessage, statusInfo].filter(Boolean).join(' | ') || `Error al crear la reserva (HTTP ${res.status || ''})`);
+      }
+      setShowNewBookingModal(false);
+      setNewForm({ activityId: '', customerId: '', date: '', time: '', participants: 1, status: 'pending' });
+      await refresh();
+    } catch (e: any) {
+      setError(`Error al crear la reserva${e?.message ? `: ${e.message}` : ''}`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Cambiar estado desde la tabla (ciclo pending -> confirmed -> cancelled -> pending)
+  const cycleStatus = async (booking: Booking) => {
+    const next = booking.status === 'pending' ? 'confirmed' : booking.status === 'confirmed' ? 'cancelled' : 'pending';
+    // Reutilizamos updateStatus (acepta confirmed y cancelled). Para volver a pending hacemos un PUT directo.
+    if (next === 'pending') {
+      try {
+        setActionLoading(true);
+        const res = await fetch(`${API_BASE}/bookings/${booking.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'pending' })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.message || 'No se pudo actualizar la reserva');
+        }
+        await refresh();
+      } catch (e: any) {
+        setError(e?.message || 'Error al actualizar la reserva');
+      } finally {
+        setActionLoading(false);
+      }
+    } else {
+      await updateStatus(booking.id, next);
+    }
+  };
+
+  const handleStartEdit = (booking: Booking) => {
+    setEditBooking(booking);
+    setEditForm({
+      date: booking.date || '',
+      time: booking.time || '',
+      participants: booking.participants ?? 1,
+      status: booking.status
+    });
+    setShowEditBookingModal(true);
+  };
+
+  const handleUpdateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editBooking) return;
+    try {
+      setActionLoading(true);
+      const res = await fetch(`${API_BASE}/bookings/${editBooking.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'No se pudo actualizar la reserva');
+      }
+      setShowEditBookingModal(false);
+      setEditBooking(null);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al actualizar la reserva');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    const ok = window.confirm('¿Seguro que deseas eliminar esta reserva? Esta acción no se puede deshacer.');
+    if (!ok) return;
+    try {
+      setActionLoading(true);
+      const res = await fetch(`${API_BASE}/bookings/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'No se pudo eliminar la reserva');
+      }
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message || 'Error al eliminar la reserva');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (showStatusMenu && statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setShowStatusMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [showStatusMenu]);
+
+  const refresh = async () => {
+    try {
+      let { ok, status, statusText, data, text } = await fetchJsonWithDetails(`${API_BASE}/bookings`);
+      if (!ok) {
+        await new Promise(r => setTimeout(r, 600));
+        ({ ok, status, statusText, data, text } = await fetchJsonWithDetails(`${API_BASE}/bookings`));
+      }
+      if (ok) {
+        const mapped: Booking[] = (Array.isArray(data) ? data : []).map((b: any) => ({
+          id: b.id,
+          customerName: b?.customer?.name || '—',
+          customerEmail: b?.customer?.email || '—',
+          activityName: b?.activity?.name || '—',
+          date: b?.date ? new Date(b.date).toISOString().split('T')[0] : '—',
+          time: b?.date ? new Date(b.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          participants: b?.participants ?? 0,
+          amount: b?.totalPrice ?? 0,
+          status: (b?.status || 'pending'),
+          paymentMethod: b?.paymentMethod || '—',
+          location: b?.activity?.location || b?.activity?.place || 'Punta Cana',
+          hasSensitive: !!b?.sensitive,
+          sensitiveMasked: maskSensitive(b?.sensitive)
+        }));
+        setBookings(mapped);
+      } else {
+        const serverMessage = (data?.message || data?.error || text || '').toString().trim();
+        const statusInfo = `${status || ''} ${statusText || ''}`.trim();
+        setError([serverMessage, statusInfo].filter(Boolean).join(' | ') || 'No se pudieron cargar las reservas');
+      }
+    } catch {}
+  };
 
   // Filtrar reservas por estado y término de búsqueda
   const filteredBookings = bookings.filter(booking => {
@@ -130,12 +349,38 @@ const Bookings: React.FC = () => {
   // Función para mostrar el modal de detalles de reserva
   const openBookingDetails = (booking: Booking) => {
     setSelectedBooking(booking);
+    setShowSensitive(false);
   };
 
   // Función para formatear la fecha
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('es-ES', options);
+  };
+
+  // Cambiar estado de reserva (confirmar/cancelar)
+  const updateStatus = async (id: string, status: 'confirmed' | 'cancelled') => {
+    try {
+      setError(null);
+      setActionLoading(true);
+      const res = await fetch(`${API_BASE}/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'No se pudo actualizar la reserva');
+      }
+      await refresh();
+      if (selectedBooking && selectedBooking.id === id) {
+        setSelectedBooking(null);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Error al actualizar la reserva');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Función para obtener el color según el estado
@@ -183,12 +428,140 @@ const Bookings: React.FC = () => {
             <Calendar className="w-4 h-4" />
             Exportar
           </button>
-          <button className="btn-primary flex items-center gap-2">
+          <button className="btn-primary flex items-center gap-2" onClick={() => setShowNewBookingModal(true)}>
             <Calendar className="w-4 h-4" />
             Nueva Reserva
           </button>
         </div>
       </div>
+
+      {/* Loading banner */}
+      {loading && (
+        <div className="mb-4 bg-sky-50 border border-sky-200 text-sky-700 px-4 py-2 rounded-lg" role="status">
+          Cargando reservas...
+        </div>
+      )}
+
+      {showNewBookingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-900">Nueva Reserva</h3>
+                <button onClick={() => setShowNewBookingModal(false)} className="text-gray-400 hover:text-gray-600" title="Cerrar" aria-label="Cerrar"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+            <form onSubmit={handleCreateBooking} className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label htmlFor="new-activity" className="block text-sm font-medium text-gray-700 mb-1">Actividad</label>
+                  <select
+                    id="new-activity"
+                    value={newForm.activityId}
+                    onChange={(e) => setNewForm({ ...newForm, activityId: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    required
+                    aria-label="Seleccionar actividad"
+                  >
+                    <option value="" disabled>Selecciona una actividad</option>
+                    {activities?.map((a: any) => (
+                      <option key={a.id} value={a.id}>{a.name || a.title || a.slug || a.id}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="new-customer" className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                  <select
+                    id="new-customer"
+                    value={newForm.customerId}
+                    onChange={(e) => setNewForm({ ...newForm, customerId: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                    required
+                    aria-label="Seleccionar cliente"
+                  >
+                    <option value="" disabled>Selecciona un cliente</option>
+                    {customers?.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name || c.fullName || c.email || c.id}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="new-date" className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                  <input id="new-date" type="date" value={newForm.date} onChange={(e) => setNewForm({ ...newForm, date: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" required />
+                </div>
+                <div>
+                  <label htmlFor="new-time" className="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                  <input id="new-time" type="time" value={newForm.time} onChange={(e) => setNewForm({ ...newForm, time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" required />
+                </div>
+                <div>
+                  <label htmlFor="new-participants" className="block text-sm font-medium text-gray-700 mb-1">Participantes</label>
+                  <input id="new-participants" type="number" min={1} value={newForm.participants} onChange={(e) => setNewForm({ ...newForm, participants: Number(e.target.value) || 1 })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" required />
+                </div>
+                <div>
+                  <label htmlFor="new-status" className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                  <select id="new-status" value={newForm.status} onChange={(e) => setNewForm({ ...newForm, status: e.target.value as any })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowNewBookingModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                <button type="submit" disabled={actionLoading} className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 flex items-center gap-2"><Save className="w-4 h-4" />{actionLoading ? 'Creando...' : 'Crear Reserva'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditBookingModal && editBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-900">Editar Reserva</h3>
+                <button onClick={() => { setShowEditBookingModal(false); setEditBooking(null); }} className="text-gray-400 hover:text-gray-600" title="Cerrar" aria-label="Cerrar"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+            <form onSubmit={handleUpdateBooking} className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="edit-date" className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                  <input id="edit-date" type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label htmlFor="edit-time" className="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                  <input id="edit-time" type="time" value={editForm.time} onChange={(e) => setEditForm({ ...editForm, time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label htmlFor="edit-participants" className="block text-sm font-medium text-gray-700 mb-1">Participantes</label>
+                  <input id="edit-participants" type="number" min={1} value={editForm.participants} onChange={(e) => setEditForm({ ...editForm, participants: Number(e.target.value) || 1 })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+                </div>
+                <div>
+                  <label htmlFor="edit-status" className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                  <select id="edit-status" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value as any })} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+                    <option value="pending">Pendiente</option>
+                    <option value="confirmed">Confirmada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => { setShowEditBookingModal(false); setEditBooking(null); }} className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                <button type="submit" disabled={actionLoading} className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 flex items-center gap-2"><Save className="w-4 h-4" />{actionLoading ? 'Guardando...' : 'Guardar Cambios'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* Filters and Search */}
       <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -208,40 +581,42 @@ const Bookings: React.FC = () => {
             <div className="relative">
               <button
                 className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"
-                onClick={() => setSelectedStatus('all')}
+                onClick={() => setShowStatusMenu(!showStatusMenu)}
               >
                 Estado: {selectedStatus === 'all' ? 'Todos' : getStatusText(selectedStatus)}
                 <ChevronDown className="w-4 h-4" />
               </button>
               
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border border-gray-200 overflow-hidden">
-                <div className="p-2">
-                  <button
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'all' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
-                    onClick={() => setSelectedStatus('all')}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'confirmed' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
-                    onClick={() => setSelectedStatus('confirmed')}
-                  >
-                    Confirmadas
-                  </button>
-                  <button
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'pending' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
-                    onClick={() => setSelectedStatus('pending')}
-                  >
-                    Pendientes
-                  </button>
-                  <button
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'cancelled' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
-                    onClick={() => setSelectedStatus('cancelled')}
-                  >
-                    Canceladas
-                  </button>
+              {showStatusMenu && (
+                <div ref={statusMenuRef} className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-20 border border-gray-200 overflow-hidden">
+                  <div className="p-2">
+                    <button
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'all' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
+                      onClick={() => { setSelectedStatus('all'); setShowStatusMenu(false); }}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'confirmed' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
+                      onClick={() => { setSelectedStatus('confirmed'); setShowStatusMenu(false); }}
+                    >
+                      Confirmadas
+                    </button>
+                    <button
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'pending' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
+                      onClick={() => { setSelectedStatus('pending'); setShowStatusMenu(false); }}
+                    >
+                      Pendientes
+                    </button>
+                    <button
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedStatus === 'cancelled' ? 'bg-sky-100 text-sky-800' : 'hover:bg-gray-100'}`}
+                      onClick={() => { setSelectedStatus('cancelled'); setShowStatusMenu(false); }}
+                    >
+                      Canceladas
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             
             <button
@@ -327,7 +702,7 @@ const Bookings: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBookings.map((booking) => (
+              {filteredBookings.filter(booking => booking).map((booking, index) => (
                 <tr key={booking.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{booking.id}</div>
@@ -350,9 +725,15 @@ const Bookings: React.FC = () => {
                     <div className="text-xs text-gray-500">{booking.paymentMethod}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                    <button
+                      onClick={() => cycleStatus(booking)}
+                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)} hover:opacity-80`}
+                      title="Cambiar estado"
+                      aria-label="Cambiar estado de la reserva"
+                      disabled={actionLoading}
+                    >
                       {getStatusText(booking.status)}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
@@ -365,6 +746,7 @@ const Bookings: React.FC = () => {
                         <Eye className="w-5 h-5" />
                       </button>
                       <button 
+                        onClick={() => handleStartEdit(booking)}
                         className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50"
                         title="Editar"
                         aria-label="Editar reserva"
@@ -372,6 +754,7 @@ const Bookings: React.FC = () => {
                         <Edit className="w-5 h-5" />
                       </button>
                       <button 
+                        onClick={() => handleDeleteBooking(booking.id)}
                         className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
                         title="Eliminar"
                         aria-label="Eliminar reserva"
@@ -480,21 +863,80 @@ const Bookings: React.FC = () => {
                     <p className="text-sm text-gray-600">{selectedBooking.participants} personas</p>
                   </div>
                 </div>
+                
+                {selectedBooking.hasSensitive && (
+                  <div className="mt-2">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium text-gray-500">Datos educativos (sensibles)</h5>
+                      <button
+                        type="button"
+                        onClick={() => setShowSensitive(v => !v)}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                        aria-expanded={!!showSensitive}
+                        aria-controls="educational-sensitive-panel"
+                      >
+                        {showSensitive ? 'Ocultar' : 'Ver'}
+                      </button>
+                    </div>
+                    {showSensitive && (
+                      <div id="educational-sensitive-panel" className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-2 space-y-3">
+                        {selectedBooking.sensitiveMasked?.card && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Tarjeta</p>
+                            <p className="text-sm text-gray-700">
+                              {selectedBooking.sensitiveMasked.card.brand ? `${selectedBooking.sensitiveMasked.card.brand} ` : ''}
+                              **** **** **** {selectedBooking.sensitiveMasked.card.last4 || '****'}
+                              {selectedBooking.sensitiveMasked.card.exp ? ` · Exp: ${selectedBooking.sensitiveMasked.card.exp}` : ''}
+                            </p>
+                          </div>
+                        )}
+                        {selectedBooking.sensitiveMasked?.billing && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Facturación</p>
+                            <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words">{JSON.stringify(selectedBooking.sensitiveMasked.billing, null, 2)}</pre>
+                          </div>
+                        )}
+                        {selectedBooking.sensitiveMasked?.customer && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Cliente (educativo)</p>
+                            <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words">{JSON.stringify(selectedBooking.sensitiveMasked.customer, null, 2)}</pre>
+                          </div>
+                        )}
+                        {typeof selectedBooking.sensitiveMasked?.notes === 'string' && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Notas</p>
+                            <p className="text-sm text-gray-700">{selectedBooking.sensitiveMasked?.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="border-t border-gray-200 pt-4">
                 <h5 className="text-sm font-medium text-gray-500 mb-2">Acciones</h5>
                 <div className="flex flex-wrap gap-2">
                   {selectedBooking.status === 'pending' && (
-                    <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-1">
+                    <button
+                      onClick={() => updateStatus(selectedBooking.id, 'confirmed')}
+                      disabled={actionLoading}
+                      title="Confirmar reserva"
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
                       <Check className="w-4 h-4" />
-                      Confirmar
+                      {actionLoading ? 'Confirmando...' : 'Confirmar'}
                     </button>
                   )}
                   {selectedBooking.status !== 'cancelled' && (
-                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 flex items-center gap-1">
+                    <button
+                      onClick={() => updateStatus(selectedBooking.id, 'cancelled')}
+                      disabled={actionLoading}
+                      title="Cancelar reserva"
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                    >
                       <X className="w-4 h-4" />
-                      Cancelar
+                      {actionLoading ? 'Cancelando...' : 'Cancelar'}
                     </button>
                   )}
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">

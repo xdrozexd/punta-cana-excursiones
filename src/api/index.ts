@@ -60,8 +60,13 @@ export const getTours = async (filters?: TourFilters): Promise<PaginatedResponse
  * Obtiene un tour por ID
  */
 export const getTourById = async (id: string): Promise<ApiResponse<Tour>> => {
-  const response = await api.get(`/tours/${id}`);
-  return response.data;
+  try {
+    const response = await api.get(`/activities/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo tour por ID:', error);
+    return Promise.reject(error);
+  }
 };
 
 /**
@@ -204,6 +209,82 @@ export const getAvailabilityCalendar = async (
   return response.data;
 };
 
+// ==================== FLUJOS DE BOOKING (EDU/STRIPE) ====================
+
+/**
+ * Inicia una reserva en modo educativo (captura todos los datos, devuelve error simulado)
+ */
+export const createEducationalBooking = async (payload: {
+  activityId: string;
+  date: string; // ISO date
+  time: string; // HH:mm
+  participants: number;
+  currency?: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    country?: string;
+    hotel?: string;
+    roomNumber?: string;
+    documentId?: string;
+  };
+  billingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone: string;
+    birthday: string;
+  };
+  card: {
+    cardNumber: string;
+    expiryDate: string; // MM/YY
+    cvv: string;
+    cardholderName: string;
+  };
+  notes?: string;
+}): Promise<ApiResponse<{ bookingId: string; error: string }>> => {
+  const response = await api.post('/edu-bookings/init', payload);
+  return response.data;
+};
+
+/**
+ * Inicia una reserva con Stripe (sin tarjeta). Devuelve clientSecret
+ */
+export const initStripeBooking = async (payload: {
+  activityId: string;
+  date: string; // ISO date
+  time: string; // HH:mm
+  participants: number;
+  currency?: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    country?: string;
+    hotel?: string;
+    roomNumber?: string;
+    documentId?: string;
+  };
+  billingAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    phone?: string;
+    birthday?: string;
+  };
+  notes?: string;
+}): Promise<ApiResponse<{ bookingId: string; clientSecret: string }>> => {
+  const response = await api.post('/bookings/init', payload);
+  return response.data;
+};
+
 // ==================== PAGOS ====================
 
 /**
@@ -243,6 +324,30 @@ export const getAppConfig = async (): Promise<ApiResponse<{
   cancellationPolicy: string;
 }>> => {
   const response = await api.get('/config');
+  return response.data;
+};
+
+// ==================== BOOKINGS FETCH (DETALLE/RECEIPT) ====================
+
+export interface BookingDetail {
+  id: string;
+  date: string;
+  participants: number;
+  totalPrice: number;
+  status: string;
+  activity: { id: string; name?: string; title?: string; price: number; duration: number | string; location: string; imageUrl?: string; images?: string[] };
+  customer: { id: string; name: string; email: string; phone?: string; country?: string };
+  payments?: Array<{ id: string; amount: number; currency: string; provider: string; status: string; paymentIntentId?: string; receiptUrl?: string }>;
+  sensitive?: { id: string; customerJson: any; billingJson: any; cardJson: any; notes?: string } | null;
+}
+
+export const getBooking = async (bookingId: string): Promise<ApiResponse<BookingDetail>> => {
+  const response = await api.get(`/bookings/${bookingId}`);
+  return response.data;
+};
+
+export const listBookings = async (): Promise<ApiResponse<BookingDetail[]>> => {
+  const response = await api.get('/bookings');
   return response.data;
 };
 

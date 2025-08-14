@@ -9,11 +9,13 @@ import customersRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import settingsRoutes from './routes/settings.js';
 import blogPostsRoutes from './routes/blog-posts.js';
+import eduBookingsRoutes from './routes/edu-bookings.js';
+import toursRoutes from './routes/tours.js';
 
 // Configuración
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
 
 // Configurar Prisma para usar PostgreSQL
@@ -37,7 +39,9 @@ app.use(express.json());
 
 // Rutas
 app.use('/api/activities', activitiesRoutes);
+app.use('/api/tours', toursRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/edu-bookings', eduBookingsRoutes);
 app.use('/api/customers', customersRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useData } from '../../contexts/DataContext';
 import { 
   BarChart3, 
   Calendar, 
@@ -15,66 +16,194 @@ import {
 const Reports: React.FC = () => {
   const [timeRange, setTimeRange] = useState<string>('month');
   const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState<boolean>(false);
-  
-  // Datos de ejemplo para los reportes
-  const revenueData = {
-    current: 45680,
-    previous: 42340,
-    percentageChange: 7.9
-  };
-  
-  const bookingsData = {
-    current: 156,
-    previous: 143,
-    percentageChange: 9.1
-  };
-  
-  const customersData = {
-    current: 98,
-    previous: 82,
-    percentageChange: 19.5
-  };
-  
-  const satisfactionData = {
-    current: 4.8,
-    previous: 4.7,
-    percentageChange: 2.1
+  const { bookings: ctxBookings, isLoading: ctxLoading, error: ctxError } = useData();
+
+  type BookingApi = {
+    id: string;
+    date?: string;
+    participants?: number;
+    totalPrice?: number;
+    status?: string;
+    activity?: { id?: string; name?: string; location?: string };
+    customer?: { id?: string; name?: string; email?: string; country?: string };
+    paymentMethod?: string;
   };
 
-  // Datos para los gráficos
-  const monthlyRevenueData = [
-    { month: 'Ene', amount: 32500 },
-    { month: 'Feb', amount: 28700 },
-    { month: 'Mar', amount: 35600 },
-    { month: 'Abr', amount: 42300 },
-    { month: 'May', amount: 38900 },
-    { month: 'Jun', amount: 47200 },
-    { month: 'Jul', amount: 53800 },
-    { month: 'Ago', amount: 58700 },
-    { month: 'Sep', amount: 51200 },
-    { month: 'Oct', amount: 47800 },
-    { month: 'Nov', amount: 42340 },
-    { month: 'Dic', amount: 45680 }
-  ];
-  
-  // Datos para el gráfico de actividades más populares
-  const topActivitiesData = [
-    { name: 'Isla Saona - Tour Completo', bookings: 45, revenue: 4005 },
-    { name: 'Hoyo Azul y Scape Park', bookings: 32, revenue: 4000 },
-    { name: 'Catamarán Party', bookings: 28, revenue: 2660 },
-    { name: 'Safari Buggy', bookings: 22, revenue: 1430 },
-    { name: 'Zip Line Adventure', bookings: 18, revenue: 1620 }
-  ];
-  
-  // Datos para el gráfico de distribución de clientes por país
-  const customersByCountryData = [
-    { country: 'España', count: 42, percentage: 35 },
-    { country: 'Estados Unidos', count: 28, percentage: 23 },
-    { country: 'Canadá', count: 18, percentage: 15 },
-    { country: 'Reino Unido', count: 12, percentage: 10 },
-    { country: 'Alemania', count: 10, percentage: 8 },
-    { country: 'Otros', count: 11, percentage: 9 }
-  ];
+  // Usar bookings del DataContext para mantener consistencia con otras secciones
+  const bookings: BookingApi[] = useMemo(() => Array.isArray(ctxBookings) ? ctxBookings as BookingApi[] : [], [ctxBookings]);
+  const loading = ctxLoading;
+  const error = ctxError;
+
+  // Rangos de tiempo
+  // Normalizadores para campos variables del backend
+  const getBookingDate = (b: BookingApi): any => (b as any)?.date || (b as any)?.bookingDate || (b as any)?.booking_date || (b as any)?.createdAt || (b as any)?.created_at;
+  const getBookingAmount = (b: BookingApi): number => Number((b as any)?.totalPrice ?? (b as any)?.total ?? (b as any)?.amount ?? 0);
+  const getRangeDates = (range: string) => {
+    const end = new Date();
+    end.setHours(23,59,59,999);
+    let start = new Date(end);
+    if (range === 'week') {
+      // Últimos 7 días incluyendo hoy
+      start = new Date(end);
+      start.setDate(end.getDate() - 6);
+    } else if (range === 'month') {
+      // Desde el primer día del mes actual
+      start = new Date(end.getFullYear(), end.getMonth(), 1, 0, 0, 0, 0);
+    } else if (range === 'quarter') {
+      // Desde el primer día del trimestre actual
+      const qStartMonth = Math.floor(end.getMonth() / 3) * 3; // 0,3,6,9
+      start = new Date(end.getFullYear(), qStartMonth, 1, 0, 0, 0, 0);
+    } else if (range === 'year') {
+      // Desde el 1 de enero del año actual
+      start = new Date(end.getFullYear(), 0, 1, 0, 0, 0, 0);
+    }
+    return { start, end };
+  };
+
+  const inRange = (d?: any, start?: Date, end?: Date) => {
+    if (!d || !start || !end) return false;
+    const t = new Date(d as any).getTime();
+    return t >= start.getTime() && t <= end.getTime();
+  };
+
+  const { start, end } = useMemo(() => getRangeDates(timeRange), [timeRange]);
+  const { start: prevStart, end: prevEnd } = useMemo(() => {
+    const dur = end.getTime() - start.getTime();
+    const prevEnd = new Date(start.getTime() - 1);
+    const prevStart = new Date(prevEnd.getTime() - dur);
+    return { start: prevStart, end: prevEnd };
+  }, [start, end]);
+
+  // KPIs actuales y previos
+  const revenueCurrent = useMemo(() => bookings.reduce((sum, b) => sum + (inRange(getBookingDate(b), start, end) ? getBookingAmount(b) : 0), 0), [bookings, start, end]);
+  const revenuePrev = useMemo(() => bookings.reduce((sum, b) => sum + (inRange(getBookingDate(b), prevStart, prevEnd) ? getBookingAmount(b) : 0), 0), [bookings, prevStart, prevEnd]);
+  const bookingsCurrent = useMemo(() => bookings.filter(b => inRange(getBookingDate(b), start, end)).length, [bookings, start, end]);
+  const bookingsPrev = useMemo(() => bookings.filter(b => inRange(getBookingDate(b), prevStart, prevEnd)).length, [bookings, prevStart, prevEnd]);
+  const customersCurrent = useMemo(() => new Set(bookings.filter(b => inRange(getBookingDate(b), start, end)).map(b => b.customer?.email || b.customer?.id || b.customer?.name)).size, [bookings, start, end]);
+  const customersPrev = useMemo(() => new Set(bookings.filter(b => inRange(getBookingDate(b), prevStart, prevEnd)).map(b => b.customer?.email || b.customer?.id || b.customer?.name)).size, [bookings, prevStart, prevEnd]);
+
+  // Si el rango actual no tiene datos, cambiar automáticamente a 'year' para mostrar información
+  useEffect(() => {
+    if (loading || error) return;
+    if (!bookings.length) return;
+    const hasInRange = bookings.some(b => inRange(getBookingDate(b), start, end));
+    if (!hasInRange && (timeRange === 'week' || timeRange === 'month')) {
+      setTimeRange('year');
+    }
+  }, [loading, error, bookings, start, end, timeRange]);
+
+  const pct = (curr: number, prev: number) => {
+    if (!prev && !curr) return 0;
+    if (!prev) return 100;
+    return Number((((curr - prev) / prev) * 100).toFixed(1));
+  };
+
+  const revenueData = { current: revenueCurrent, previous: revenuePrev, percentageChange: pct(revenueCurrent, revenuePrev) };
+  const bookingsData = { current: bookingsCurrent, previous: bookingsPrev, percentageChange: pct(bookingsCurrent, bookingsPrev) };
+  const customersData = { current: customersCurrent, previous: customersPrev, percentageChange: pct(customersCurrent, customersPrev) };
+  const satisfactionData = { current: 4.8, previous: 4.7, percentageChange: 2.1 }; // placeholder hasta tener fuente real
+
+  // Serie para el gráfico según rango seleccionado
+  const revenueSeries = useMemo(() => {
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const series: { label: string; amount: number }[] = [];
+    if (!start || !end) return series;
+    const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+    const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    if (timeRange === 'week' || timeRange === 'month') {
+      // Barras diarias dentro del rango
+      for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
+        const key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        const dayTotal = bookings.reduce((sum, b) => {
+          const bd = getBookingDate(b); if (!bd) return sum;
+          const dd = new Date(bd); dd.setHours(0,0,0,0);
+          return sum + (sameDay(d, dd) ? getBookingAmount(b) : 0);
+        }, 0);
+        series.push({ label: key, amount: dayTotal });
+      }
+    } else {
+      // Barras mensuales dentro del rango (quarter/year)
+      const acc = new Map<string, number>();
+      for (let y = start.getFullYear(); y <= end.getFullYear(); y++) {
+        const mStart = y === start.getFullYear() ? start.getMonth() : 0;
+        const mEnd = y === end.getFullYear() ? end.getMonth() : 11;
+        for (let m = mStart; m <= mEnd; m++) {
+          const key = `${months[m]} ${String(y).slice(-2)}`;
+          acc.set(key, 0);
+        }
+      }
+      for (const b of bookings) {
+        const bd = getBookingDate(b); if (!bd) continue;
+        const d = new Date(bd);
+        if (!inRange(bd, start, end)) continue;
+        const key = `${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+        acc.set(key, (acc.get(key) || 0) + getBookingAmount(b));
+      }
+      for (const [label, amount] of acc.entries()) series.push({ label, amount });
+    }
+    return series;
+  }, [bookings, start, end, timeRange]);
+
+  const revenueMax = useMemo(() => Math.max(1, ...revenueSeries.map(s => s.amount)), [revenueSeries]);
+
+  // Top actividades del rango
+  const topActivitiesData = useMemo(() => {
+    const map = new Map<string, { name: string; bookings: number; revenue: number }>();
+    for (const b of bookings) {
+      if (!inRange(getBookingDate(b), start, end)) continue;
+      const name = b.activity?.name || '—';
+      const entry = map.get(name) || { name, bookings: 0, revenue: 0 };
+      entry.bookings += 1;
+      entry.revenue += getBookingAmount(b);
+      map.set(name, entry);
+    }
+    return Array.from(map.values()).sort((a, b) => b.bookings - a.bookings).slice(0, 5);
+  }, [bookings, start, end]);
+
+  // Rendimiento reciente (últimos 7 días)
+  const recentDays = useMemo(() => {
+    const dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const arr: { date: string; day: string; bookings: number; revenue: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const key = `${yyyy}-${mm}-${dd}`;
+      const bookingsOfDay = bookings.filter(b => {
+        const bd = getBookingDate(b); if (!bd) return false;
+        const d2 = new Date(bd); d2.setHours(0,0,0,0);
+        const k2 = `${d2.getFullYear()}-${String(d2.getMonth()+1).padStart(2,'0')}-${String(d2.getDate()).padStart(2,'0')}`;
+        return k2 === key;
+      });
+      const revenue = bookingsOfDay.reduce((s, b) => s + getBookingAmount(b), 0);
+      arr.push({ date: key, day: dayNames[d.getDay()], bookings: bookingsOfDay.length, revenue });
+    }
+    return arr;
+  }, [bookings]);
+
+  // Máximo para barra de actividades (evita división por cero)
+  const topActivitiesMax = useMemo(() => {
+    const vals = topActivitiesData.map(a => a.bookings);
+    return Math.max(1, ...(vals.length ? vals : [1]));
+  }, [topActivitiesData]);
+
+  // Distribución por país
+  const customersByCountryData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of bookings) {
+      if (!inRange(getBookingDate(b), start, end)) continue;
+      const country = (b.customer?.country || 'Otros').trim();
+      map.set(country, (map.get(country) || 0) + 1);
+    }
+    const total = Array.from(map.values()).reduce((a, c) => a + c, 0) || 1;
+    return Array.from(map.entries()).map(([country, count]) => ({ country, count, percentage: Math.round((count / total) * 100) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [bookings, start, end]);
 
   // Función para cambiar el rango de tiempo
   const handleTimeRangeChange = (range: string) => {
@@ -134,12 +263,25 @@ const Reports: React.FC = () => {
           <p className="text-gray-600">
             Visualiza el rendimiento de tu negocio con datos detallados
           </p>
+          <p className="text-xs text-gray-500 mt-1">{!loading ? `Registros cargados: ${bookings.length}` : 'Cargando…'}</p>
         </div>
+        {loading && (
+          <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800" role="status" aria-live="polite">
+            Cargando datos de reportes…
+          </div>
+        )}
+        {error && (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800" role="alert" aria-live="assertive">
+            {error}
+          </div>
+        )}
         <div className="mt-4 md:mt-0 flex gap-3">
           <div className="relative">
             <button
               className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50"
               onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
+              aria-haspopup="listbox"
+              aria-expanded={showTimeRangeDropdown}
             >
               <Calendar className="w-4 h-4" />
               {getTimeRangeText()}
@@ -266,6 +408,13 @@ const Reports: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {!loading && bookings.filter(b => inRange(getBookingDate(b), start, end)).length === 0 && !error && (
+          <div className="lg:col-span-2">
+            <div className="rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800" role="status" aria-live="polite">
+              No hay datos para el rango seleccionado. Prueba otro rango (ej. "Este Año").
+            </div>
+          </div>
+        )}
         {/* Revenue Chart */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-6">
@@ -278,11 +427,12 @@ const Reports: React.FC = () => {
             </button>
           </div>
           
-          {/* Chart Placeholder */}
+          {/* Chart Placeholder */
+          }
           <div className="h-64 bg-gray-50 rounded-lg flex flex-col justify-center items-center">
             <div className="w-full px-4">
               <div className="flex justify-between mb-2 text-xs text-gray-500">
-                <span>$60,000</span>
+                <span>${revenueMax.toLocaleString()}</span>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -291,15 +441,15 @@ const Reports: React.FC = () => {
                 <span></span>
               </div>
               <div className="flex h-40 items-end space-x-2">
-                {monthlyRevenueData.map((month, index) => (
+                {revenueSeries.map((item, index) => (
                   <div key={index} className="flex-1 flex flex-col items-center">
                     <div 
                       className={`w-full bg-sky-500 rounded-t-sm ${
-                        index === monthlyRevenueData.length - 1 ? 'bg-sky-600' : ''
+                        index === revenueSeries.length - 1 ? 'bg-sky-600' : ''
                       }`} 
-                      style={{ height: `${(month.amount / 60000) * 100}%` }}
+                      style={{ height: `${(item.amount / revenueMax) * 100}%` }}
                     ></div>
-                    <span className="text-xs mt-1 text-gray-600">{month.month}</span>
+                    <span className="text-xs mt-1 text-gray-600">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -333,7 +483,7 @@ const Reports: React.FC = () => {
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-sky-500 h-2 rounded-full" 
-                      style={{ width: `${(activity.bookings / topActivitiesData[0].bookings) * 100}%` }}
+                      style={{ width: `${(activity.bookings / topActivitiesMax) * 100}%` }}
                     ></div>
                   </div>
                   <div className="flex justify-between items-center mt-1">
@@ -406,15 +556,7 @@ const Reports: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            {[
-              { date: '2023-12-15', day: 'Viernes', bookings: 12, revenue: 1450 },
-              { date: '2023-12-16', day: 'Sábado', bookings: 18, revenue: 2100 },
-              { date: '2023-12-17', day: 'Domingo', bookings: 15, revenue: 1850 },
-              { date: '2023-12-18', day: 'Lunes', bookings: 8, revenue: 950 },
-              { date: '2023-12-19', day: 'Martes', bookings: 10, revenue: 1200 },
-              { date: '2023-12-20', day: 'Miércoles', bookings: 11, revenue: 1350 },
-              { date: '2023-12-21', day: 'Jueves', bookings: 9, revenue: 1100 }
-            ].map((day, index) => (
+            {recentDays.map((day, index) => (
               <div key={index} className="flex items-center p-3 rounded-lg hover:bg-gray-50">
                 <div className="w-16 text-center mr-4">
                   <div className="text-sm font-medium text-gray-900">{day.date.split('-')[2]}</div>

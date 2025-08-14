@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   MapPin, 
@@ -16,12 +16,87 @@ import {
   FileText
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
 
 export const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const { auth, logout } = useAuth();
+  const { bookings: ctxBookings, activities } = useData();
+
+  // --- Notificaciones basadas en reservas reales ---
+  const [lastSeenTs, setLastSeenTs] = useState<number>(() => {
+    const v = localStorage.getItem('admin.notifications.lastSeen');
+    return v ? Number(v) : 0;
+  });
+
+  const getBookingDate = (b: any): any => b?.date || b?.bookingDate || b?.booking_date || b?.createdAt || b?.created_at;
+  const getBookingAmount = (b: any): number => Number(b?.amount ?? b?.totalPrice ?? b?.total ?? 0) || 0;
+  const parseDate = (d: any): number => {
+    const t = new Date(d as any).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+  const timeAgo = (iso: any) => {
+    const t = parseDate(iso);
+    if (!t) return '';
+    const diff = Date.now() - t;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'ahora';
+    if (m < 60) return `hace ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `hace ${h} h`;
+    const d = Math.floor(h / 24);
+    return `hace ${d} d`;
+  };
+
+  // Ordenar reservas recientes y construir notificaciones
+  const recentNotifications = useMemo(() => {
+    const arr = Array.isArray(ctxBookings) ? [...ctxBookings] : [];
+    arr.sort((a, b) => parseDate(getBookingDate(b)) - parseDate(getBookingDate(a)));
+    return arr.slice(0, 10).map((b: any) => ({
+      title: 'Nueva reserva',
+      message: `${b?.customer?.name || 'Cliente'} reservó ${b?.activity?.name || 'actividad'}`,
+      time: timeAgo(getBookingDate(b)),
+      ts: parseDate(getBookingDate(b)),
+      booking: b,
+    }));
+  }, [ctxBookings]);
+
+  const unreadCount = useMemo(() => recentNotifications.filter(n => n.ts > lastSeenTs).length, [recentNotifications, lastSeenTs]);
+
+  // Ingresos del mes actual basados en reservas
+  const { startOfMonthTs } = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    return { startOfMonthTs: start.getTime() };
+  }, []);
+
+  const monthlyRevenue = useMemo(() => {
+    if (!Array.isArray(ctxBookings) || !ctxBookings.length) return 0;
+    return ctxBookings.reduce((sum, b) => {
+      const ts = parseDate(getBookingDate(b));
+      if (!ts || ts < startOfMonthTs) return sum;
+      return sum + getBookingAmount(b);
+    }, 0);
+  }, [ctxBookings, startOfMonthTs]);
+
+  const currency = useMemo(() => new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }), []);
+
+  // Al abrir el dropdown, marcar como visto
+  const toggleNotifications = () => {
+    setShowNotifications(prev => {
+      const next = !prev;
+      if (!prev && next) {
+        const now = Date.now();
+        setLastSeenTs(now);
+        localStorage.setItem('admin.notifications.lastSeen', String(now));
+      }
+      return next;
+    });
+  };
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -123,7 +198,7 @@ export const AdminLayout: React.FC = () => {
       <div className="flex-1 flex flex-col">
         {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-          <div className="flex items-center justify-between h-16 px-6">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
             {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
@@ -135,13 +210,13 @@ export const AdminLayout: React.FC = () => {
             </button>
 
             {/* Search bar */}
-            <div className="flex-1 max-w-lg mx-4">
+            <div className="w-auto max-w-[200px] sm:flex-1 sm:max-w-lg mx-2 sm:mx-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Buscar actividades, reservas, clientes..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
+                  className="w-full pl-9 pr-3 py-1.5 text-sm sm:py-2 sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       // En una aplicación real, esto podría filtrar resultados o navegar a una página de búsqueda
@@ -159,40 +234,46 @@ export const AdminLayout: React.FC = () => {
               {/* Notifications */}
               <div className="relative">
                 <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={toggleNotifications}
                   className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   aria-label="Abrir notificaciones"
                   title="Abrir notificaciones"
                 >
                   <Bell className="w-5 h-5" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-4 px-1 bg-red-500 text-white text-[10px] leading-4 rounded-full text-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
                 
                 {/* Dropdown de notificaciones */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
+                  <div className="absolute right-0 mt-2 w-[90vw] sm:w-80 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
                     <div className="px-4 py-2 border-b border-gray-200">
                       <div className="flex justify-between items-center">
                         <h3 className="text-sm font-semibold text-gray-900">Notificaciones</h3>
-                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">3 nuevas</span>
+                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadCount} nuevas</span>
                       </div>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                      {[
-                        { title: 'Nueva reserva', message: 'María García ha reservado Isla Saona', time: 'hace 5 min', isNew: true },
-                        { title: 'Reseña recibida', message: '5 estrellas para Catamarán Party', time: 'hace 30 min', isNew: true },
-                        { title: 'Pago recibido', message: 'Pago de $178 confirmado', time: 'hace 1 hora', isNew: true },
-                        { title: 'Reserva cancelada', message: 'Carlos Rodríguez canceló su reserva', time: 'hace 3 horas', isNew: false },
-                      ].map((notification, index) => (
+                      {recentNotifications.length === 0 && (
+                        <div className="px-4 py-6 text-center text-sm text-gray-500">Sin notificaciones</div>
+                      )}
+                      {recentNotifications.map((n, index) => (
                         <div 
                           key={index} 
-                          className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${notification.isNew ? 'bg-blue-50' : ''}`}
+                          className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${n.ts > lastSeenTs ? 'bg-blue-50' : ''}`}
+                          onClick={() => {
+                            setSelectedBooking(n.booking);
+                            setShowNotifications(false);
+                          }}
                         >
                           <div className="flex justify-between">
-                            <p className="text-sm font-medium text-gray-900">{notification.title}</p>
-                            <span className="text-xs text-gray-500">{notification.time}</span>
+                            <p className="text-sm font-medium text-gray-900">{n.title}</p>
+                            <span className="text-xs text-gray-500">{n.time}</span>
                           </div>
-                          <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
+                          <p className="text-xs text-gray-600 mt-1">{n.message}</p>
                         </div>
                       ))}
                     </div>
@@ -214,21 +295,98 @@ export const AdminLayout: React.FC = () => {
               {/* Quick stats */}
               <div className="hidden lg:flex items-center gap-6 text-sm">
                 <div className="text-center">
-                  <p className="font-semibold text-gray-900">24</p>
+                  <p className="font-semibold text-gray-900">{Array.isArray(activities) ? activities.length : 0}</p>
                   <p className="text-gray-500">Actividades</p>
                 </div>
                 <div className="text-center">
-                  <p className="font-semibold text-green-600">156</p>
+                  <p className="font-semibold text-green-600">{Array.isArray(ctxBookings) ? ctxBookings.length : 0}</p>
                   <p className="text-gray-500">Reservas</p>
                 </div>
                 <div className="text-center">
-                  <p className="font-semibold text-blue-600">$45.6K</p>
+                  <p className="font-semibold text-blue-600">{currency.format(monthlyRevenue)}</p>
                   <p className="text-gray-500">Este mes</p>
                 </div>
               </div>
+
             </div>
           </div>
         </header>
+
+        {/* Booking Details Modal */}
+        {selectedBooking && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedBooking(null)} aria-hidden="true" />
+            <div className="relative bg-white w-full max-w-lg mx-4 rounded-lg shadow-xl border border-gray-200" role="dialog" aria-modal="true" aria-label="Detalle de Reserva">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Detalle de Reserva</h3>
+                <button className="p-1 text-gray-400 hover:text-gray-600" onClick={() => setSelectedBooking(null)} aria-label="Cerrar">
+                  ✕
+                </button>
+              </div>
+              <div className="p-4 space-y-3 text-sm text-gray-800">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-gray-500">ID</div>
+                    <div className="font-medium break-all">{selectedBooking?.id || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Fecha</div>
+                    <div className="font-medium">{(() => { const d = getBookingDate(selectedBooking); return d ? new Date(d).toLocaleString() : '—'; })()}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Cliente</div>
+                    <div className="font-medium">{selectedBooking?.customer?.name || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Email</div>
+                    <div className="font-medium break-all">{selectedBooking?.customer?.email || '—'}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-gray-500">Actividad</div>
+                    <div className="font-medium">{selectedBooking?.activity?.name || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Participantes</div>
+                    <div className="font-medium">{selectedBooking?.participants ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Importe</div>
+                    <div className="font-medium">{new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'USD' }).format(getBookingAmount(selectedBooking))}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Estado</div>
+                    <div className="font-medium capitalize">{selectedBooking?.status || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Pago</div>
+                    <div className="font-medium">{selectedBooking?.paymentMethod || '—'}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <div className="text-gray-500">Ubicación</div>
+                    <div className="font-medium">{selectedBooking?.activity?.location || selectedBooking?.activity?.place || '—'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200">
+                <button
+                  className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                  onClick={() => setSelectedBooking(null)}
+                >
+                  Cerrar
+                </button>
+                <button
+                  className="px-3 py-2 text-sm rounded-md bg-sky-600 text-white hover:bg-sky-700"
+                  onClick={() => {
+                    setSelectedBooking(null);
+                    navigate('/admin/bookings');
+                  }}
+                >
+                  Ver en Reservas
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">

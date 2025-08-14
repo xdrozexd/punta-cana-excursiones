@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   User, 
   Lock, 
@@ -16,7 +16,12 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('profile');
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   
+  // Usa el proxy de Vite para '/api'
+  const API_BASE = ''
+
   // Estados para los formularios
   const [profileForm, setProfileForm] = useState({
     name: 'Administrador',
@@ -47,6 +52,56 @@ const Settings: React.FC = () => {
     website: 'www.puntacanaexcursiones.com',
     taxId: '123456789'
   });
+
+  // Cargar settings desde backend
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`${API_BASE}/api/settings`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.message || 'No se pudieron cargar las configuraciones');
+        }
+        const data = await res.json();
+        // data es un objeto key->value
+        setCompanySettings(prev => ({
+          ...prev,
+          companyName: data.companyName ?? prev.companyName,
+          address: data.address ?? prev.address,
+          phone: data.phone ?? prev.phone,
+          email: data.email ?? prev.email,
+          website: data.website ?? prev.website,
+          taxId: data.taxId ?? prev.taxId,
+        }));
+        setNotificationSettings(prev => ({
+          ...prev,
+          emailNotifications: data.emailNotifications ?? prev.emailNotifications,
+          bookingAlerts: data.bookingAlerts ?? prev.bookingAlerts,
+          marketingEmails: data.marketingEmails ?? prev.marketingEmails,
+          systemUpdates: data.systemUpdates ?? prev.systemUpdates,
+        }));
+      } catch (e: any) {
+        setError(e?.message || 'Error al cargar configuraciones');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const saveSetting = async (key: string, value: any) => {
+    const res = await fetch(`${API_BASE}/api/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.message || `No se pudo guardar la configuración ${key}`);
+    }
+  };
 
   // Función para manejar el envío del formulario de perfil
   const handleProfileSubmit = (e: React.FormEvent) => {
@@ -84,21 +139,41 @@ const Settings: React.FC = () => {
   };
 
   // Función para manejar el cambio en los ajustes de notificaciones
-  const handleNotificationChange = (setting: keyof typeof notificationSettings) => {
+  const handleNotificationChange = async (setting: keyof typeof notificationSettings) => {
+    const newValue = !notificationSettings[setting];
+    // Optimista
     setNotificationSettings({
       ...notificationSettings,
-      [setting]: !notificationSettings[setting]
+      [setting]: newValue
     });
+    try {
+      await saveSetting(setting, newValue);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (e) {
+      // revertir
+      setNotificationSettings({
+        ...notificationSettings,
+        [setting]: !newValue
+      });
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 2500);
+    }
   };
 
   // Función para manejar el envío del formulario de la empresa
-  const handleCompanySubmit = (e: React.FormEvent) => {
+  const handleCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulamos una actualización exitosa
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-    }, 3000);
+    try {
+      await Promise.all(
+        Object.entries(companySettings).map(([key, value]) => saveSetting(key, value))
+      );
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (err) {
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 2500);
+    }
   };
 
   // Renderiza el contenido según la pestaña activa
@@ -109,26 +184,32 @@ const Settings: React.FC = () => {
           <form onSubmit={handleProfileSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre Completo
                 </label>
                 <input
                   type="text"
+                  id="profile-name"
+                  name="name"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="Tu nombre completo"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-1">
                   Correo Electrónico
                 </label>
                 <input
                   type="email"
+                  id="profile-email"
+                  name="email"
                   value={profileForm.email}
                   onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="tu@email.com"
                   required
                 />
               </div>
@@ -136,38 +217,47 @@ const Settings: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700 mb-1">
                   Teléfono
                 </label>
                 <input
                   type="tel"
+                  id="profile-phone"
+                  name="phone"
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="+1 (234) 567-8900"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="profile-role" className="block text-sm font-medium text-gray-700 mb-1">
                   Rol
                 </label>
                 <input
                   type="text"
+                  id="profile-role"
+                  name="role"
                   value={profileForm.role}
                   onChange={(e) => setProfileForm({...profileForm, role: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent bg-gray-100"
+                  title="Campo de solo lectura"
                   readOnly
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="profile-bio" className="block text-sm font-medium text-gray-700 mb-1">
                 Biografía
               </label>
               <textarea
+                id="profile-bio"
+                name="bio"
                 value={profileForm.bio}
                 onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="Cuéntanos sobre ti..."
                 rows={4}
               ></textarea>
             </div>
@@ -188,40 +278,49 @@ const Settings: React.FC = () => {
         return (
           <form onSubmit={handlePasswordSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">
                 Contraseña Actual
               </label>
               <input
                 type="password"
+                id="current-password"
+                name="currentPassword"
                 value={passwordForm.currentPassword}
                 onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="Ingresa tu contraseña actual"
                 required
               />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
                   Nueva Contraseña
                 </label>
                 <input
                   type="password"
+                  id="new-password"
+                  name="newPassword"
                   value={passwordForm.newPassword}
                   onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="Ingresa nueva contraseña"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
                   Confirmar Nueva Contraseña
                 </label>
                 <input
                   type="password"
+                  id="confirm-password"
+                  name="confirmPassword"
                   value={passwordForm.confirmPassword}
                   onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="Confirma nueva contraseña"
                   required
                 />
               </div>
@@ -276,6 +375,8 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     id="emailNotifications"
+                    data-testid="email-notifications-toggle"
+                    aria-label="Notificaciones por Email"
                     checked={notificationSettings.emailNotifications}
                     onChange={() => handleNotificationChange('emailNotifications')}
                     className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
@@ -298,6 +399,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     id="bookingAlerts"
+                    aria-label="Alertas de Reservas"
                     checked={notificationSettings.bookingAlerts}
                     onChange={() => handleNotificationChange('bookingAlerts')}
                     className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
@@ -320,6 +422,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     id="marketingEmails"
+                    aria-label="Emails de Marketing"
                     checked={notificationSettings.marketingEmails}
                     onChange={() => handleNotificationChange('marketingEmails')}
                     className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
@@ -342,6 +445,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     id="systemUpdates"
+                    aria-label="Actualizaciones del Sistema"
                     checked={notificationSettings.systemUpdates}
                     onChange={() => handleNotificationChange('systemUpdates')}
                     className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in-out"
@@ -372,76 +476,94 @@ const Settings: React.FC = () => {
           <form onSubmit={handleCompanySubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre de la Empresa
                 </label>
                 <input
                   type="text"
+                  id="company-name"
+                  name="companyName"
                   value={companySettings.companyName}
                   onChange={(e) => setCompanySettings({...companySettings, companyName: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="Nombre de tu empresa"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="tax-id" className="block text-sm font-medium text-gray-700 mb-1">
                   Número de Identificación Fiscal
                 </label>
                 <input
                   type="text"
+                  id="tax-id"
+                  name="taxId"
                   value={companySettings.taxId}
                   onChange={(e) => setCompanySettings({...companySettings, taxId: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="Ej: 12345678-9"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="company-address" className="block text-sm font-medium text-gray-700 mb-1">
                 Dirección
               </label>
               <input
                 type="text"
+                id="company-address"
+                name="address"
                 value={companySettings.address}
                 onChange={(e) => setCompanySettings({...companySettings, address: e.target.value})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="Dirección completa de la empresa"
               />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="company-phone" className="block text-sm font-medium text-gray-700 mb-1">
                   Teléfono
                 </label>
                 <input
                   type="tel"
+                  id="company-phone"
+                  name="phone"
                   value={companySettings.phone}
                   onChange={(e) => setCompanySettings({...companySettings, phone: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="+1 (234) 567-8900"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="company-email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email
                 </label>
                 <input
                   type="email"
+                  id="company-email"
+                  name="email"
                   value={companySettings.email}
                   onChange={(e) => setCompanySettings({...companySettings, email: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                  placeholder="contacto@empresa.com"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="company-website" className="block text-sm font-medium text-gray-700 mb-1">
                 Sitio Web
               </label>
               <input
                 type="url"
+                id="company-website"
+                name="website"
                 value={companySettings.website}
                 onChange={(e) => setCompanySettings({...companySettings, website: e.target.value})}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                placeholder="https://www.empresa.com"
               />
             </div>
             
@@ -616,7 +738,15 @@ const Settings: React.FC = () => {
               </h2>
             </div>
             
-            {renderTabContent()}
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Cargando configuraciones...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500">
+                <p>Error: {error}</p>
+              </div>
+            ) : renderTabContent()}
           </div>
         </div>
       </div>
