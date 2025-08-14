@@ -7,10 +7,22 @@ import {
   Award, 
   MapPin, 
   ChevronRight,
-  CheckCircle
+  CheckCircle,
+  Sailboat,
+  Mountain,
+  Waves,
+  Building2,
+  MousePointerSquare,
+  CalendarDays,
+  Sun,
+  ShieldCheck,
+  Sparkles,
+  BadgePercent
 } from 'lucide-react';
 import { Button } from '../components/ui';
 import { TourCard } from '../components/ui/TourCard';
+import { CategoryCard } from '../components/ui/CategoryCard';
+import { FaqItem } from '../components/ui/FaqItem';
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
@@ -47,6 +59,48 @@ const testimonials = [
     avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300&h=300',
     avatarFallback: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300&h=300',
     tour: 'Safari Aventura',
+  },
+];
+
+const tourCategories = [
+  {
+    icon: <Sailboat />,
+    title: 'Islas y Catamaranes',
+    to: '/tours?category=islas-y-catamaranes',
+  },
+  {
+    icon: <Mountain />,
+    title: 'Aventura y Safari',
+    to: '/tours?category=aventura-y-safari',
+  },
+  {
+    icon: <Waves />,
+    title: 'Acuáticas y Snorkel',
+    to: '/tours?category=acuaticas-y-snorkel',
+  },
+  {
+    icon: <Building2 />,
+    title: 'Culturales y Ciudad',
+    to: '/tours?category=culturales-y-ciudad',
+  },
+];
+
+const faqData = [
+  {
+    question: '¿Cuál es su política de cancelación?',
+    answer: 'Ofrecemos cancelación gratuita hasta 24 horas antes del inicio de la excursión. Si cancelas con menos de 24 horas, se aplicará un cargo del 50%. Las no presentaciones no son reembolsables.',
+  },
+  {
+    question: '¿El transporte desde mi hotel está incluido?',
+    answer: 'Sí, la mayoría de nuestros tours incluyen transporte de ida y vuelta desde los principales hoteles de Punta Cana. Puedes verificar esta información en la sección \'Incluido\' de cada tour.',
+  },
+  {
+    question: '¿Qué debo llevar a las excursiones?',
+    answer: 'Recomendamos llevar traje de baño, toalla, protector solar biodegradable, sombrero o gorra, lentes de sol y dinero en efectivo para propinas o souvenirs. Para tours de aventura, es aconsejable llevar calzado cerrado.',
+  },
+  {
+    question: '¿Qué sucede si llueve el día del tour?',
+    answer: 'Las lluvias tropicales suelen ser breves. La mayoría de los tours se realizan con lluvia o sol. Si las condiciones climáticas son peligrosas (tormenta tropical, huracán), el tour se cancelará y te ofreceremos reprogramar o un reembolso completo.',
   },
 ];
 
@@ -224,6 +278,42 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* Tour Categories Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container-custom">
+          <motion.div 
+            className="mb-12 text-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={fadeInUp}
+            transition={{ duration: 0.7 }}
+          >
+            <h2 className="heading-secondary">Explora por Categoría</h2>
+            <p className="mx-auto max-w-2xl text-gray-600 mt-4">
+              Encuentra la experiencia perfecta para ti. Navega por nuestras categorías de tours y descubre todo lo que Punta Cana tiene para ofrecer.
+            </p>
+          </motion.div>
+          <motion.div 
+            className="grid grid-cols-2 md:grid-cols-4 gap-6"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            {tourCategories.map((category, index) => (
+              <CategoryCard 
+                key={category.title}
+                icon={category.icon}
+                title={category.title}
+                to={category.to}
+                delay={index * 0.1}
+              />
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
       {/* Featured Tours Section */}
       <section 
         ref={featuredRef} 
@@ -275,7 +365,7 @@ export const Home: React.FC = () => {
             ) : (
               activities
                 .filter(activity => activity.featured)
-                .slice(0, 4)
+                .slice(0, 3)
                 .map((tour, index) => (
                   <motion.div 
                     key={tour.id}
@@ -424,79 +514,108 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container-custom">
+          <motion.div 
+            className="mb-12 text-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={fadeInUp}
+          >
+            <h2 className="heading-secondary">Reserva en 3 Simples Pasos</h2>
+            <p className="mx-auto max-w-2xl text-gray-600 mt-4">
+              Tu próxima gran aventura está a solo unos clics de distancia. Nuestro proceso de reserva es rápido, fácil y seguro.
+            </p>
+          </motion.div>
+          <motion.div 
+            className="grid md:grid-cols-3 gap-8 text-center"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            {/* Step 1 */}
+            <motion.div variants={fadeInUp} className="p-6">
+              <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg text-caribbean-600">
+                <MousePointerSquare className="h-10 w-10" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-gray-900">1. Elige tu Aventura</h3>
+              <p className="text-gray-600">Explora nuestra selección de tours y elige la experiencia que más te guste.</p>
+            </motion.div>
+            {/* Step 2 */}
+            <motion.div variants={fadeInUp} className="p-6">
+              <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg text-blue-600">
+                <CalendarDays className="h-10 w-10" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-gray-900">2. Reserva tu Fecha</h3>
+              <p className="text-gray-600">Selecciona el día y la hora que prefieras y completa tus datos de forma segura.</p>
+            </motion.div>
+            {/* Step 3 */}
+            <motion.div variants={fadeInUp} className="p-6">
+              <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg text-amber-600">
+                <Sun className="h-10 w-10" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-gray-900">3. Disfruta el Paraíso</h3>
+              <p className="text-gray-600">¡Todo listo! Prepárate para vivir una experiencia inolvidable en Punta Cana.</p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Testimonials Section */}
       <section 
         ref={testimonialsRef}
-        className="py-20 bg-caribbean-600 text-white"
+        className="py-20 bg-gradient-to-br from-sky-400 via-blue-500 to-blue-600"
       >
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <motion.span 
-              initial={{ opacity: 0 }}
-              animate={testimonialsInView ? { opacity: 1 } : { opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-block rounded-full bg-white/20 px-3 py-1 text-sm font-medium text-white"
-            >
-              Testimonios
-            </motion.span>
-            
-            <motion.h2 
-              initial={{ opacity: 0, y: 20 }}
-              animate={testimonialsInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="heading-secondary mt-2 mb-4"
-            >
-              Lo Que Dicen Nuestros Clientes
-            </motion.h2>
-            
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={testimonialsInView ? { opacity: 1 } : { opacity: 0 }}
-              transition={{ duration: 0.7, delay: 0.4 }}
-              className="mx-auto max-w-2xl text-caribbean-100"
-            >
-              Miles de viajeros han tenido experiencias increíbles con nuestras excursiones. Estas son algunas de sus historias.
-            </motion.p>
-          </div>
+          <motion.div 
+            className="mb-12 text-center"
+            initial="hidden"
+            animate={testimonialsInView ? "visible" : "hidden"}
+            variants={fadeInUp}
+          >
+            <h2 className="heading-secondary text-white">Lo Que Dicen Nuestros Clientes</h2>
+          </motion.div>
 
-          <div className="max-w-4xl mx-auto">
+          <div className="relative">
             <motion.div 
-              key={testimonials[currentTestimonial].id}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
+              key={currentTestimonial}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.5 }}
-              className="bg-white rounded-2xl shadow-xl p-8 text-gray-900"
+              className="relative max-w-3xl mx-auto"
             >
-              <div className="flex items-center mb-6">
-                <ImageWithFallback 
-                  src={testimonials[currentTestimonial].avatar} 
-                  fallbackSrc={testimonials[currentTestimonial].avatarFallback}
-                  alt={testimonials[currentTestimonial].name}
-                  className="w-16 h-16 rounded-full object-cover border-4 border-caribbean-100"
-                  width={64}
-                  height={64}
-                />
-                <div className="ml-4">
-                  <h4 className="text-xl font-bold">{testimonials[currentTestimonial].name}</h4>
-                  <p className="text-gray-600">{testimonials[currentTestimonial].location}</p>
-                </div>
-                <div className="ml-auto">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`w-5 h-5 ${i < testimonials[currentTestimonial].rating ? 'text-yellow-400' : 'text-gray-300'}`} 
-                        fill={i < testimonials[currentTestimonial].rating ? 'currentColor' : 'none'}
-                      />
-                    ))}
+              <div className="absolute top-0 left-0 w-full h-full bg-white/50 backdrop-blur-sm rounded-2xl -z-10 transform -rotate-2"></div>
+              <div className="p-8 bg-white rounded-2xl shadow-lg">
+                <div className="flex items-center mb-6">
+                  <ImageWithFallback 
+                    src={testimonials[currentTestimonial].avatar}
+                    alt={testimonials[currentTestimonial].name}
+                    fallbackSrc={testimonials[currentTestimonial].avatarFallback}
+                    className="w-16 h-16 rounded-full object-cover mr-4"
+                  />
+                  <div>
+                    <h4 className="font-bold text-lg text-gray-900">{testimonials[currentTestimonial].name}</h4>
+                    <p className="text-sm text-gray-500">{testimonials[currentTestimonial].location}</p>
+                    <div className="flex items-center mt-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`w-5 h-5 ${i < testimonials[currentTestimonial].rating ? 'text-yellow-400' : 'text-gray-300'}`} 
+                          fill={i < testimonials[currentTestimonial].rating ? 'currentColor' : 'none'}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Tour: {testimonials[currentTestimonial].tour}</p>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">Tour: {testimonials[currentTestimonial].tour}</p>
                 </div>
+                <blockquote className="text-lg italic text-gray-700">
+                  "{testimonials[currentTestimonial].comment}"
+                </blockquote>
               </div>
-              <blockquote className="text-lg italic text-gray-700">
-                "{testimonials[currentTestimonial].comment}"
-              </blockquote>
             </motion.div>
 
             <div className="flex justify-center mt-8">
@@ -515,7 +634,69 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* FAQ Section */}
+      <section className="py-20 bg-white">
+        <div className="container-custom">
+          <motion.div 
+            className="mb-12 text-center"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            variants={fadeInUp}
+          >
+            <h2 className="heading-secondary">Preguntas Frecuentes</h2>
+            <p className="mx-auto max-w-2xl text-gray-600 mt-4">
+              Aquí respondemos algunas de las dudas más comunes de nuestros viajeros. Si no encuentras tu respuesta, no dudes en contactarnos.
+            </p>
+          </motion.div>
+          <motion.div 
+            className="max-w-3xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={staggerContainer}
+          >
+            {faqData.map((faq, index) => (
+              <motion.div key={index} variants={fadeInUp}>
+                <FaqItem question={faq.question} answer={faq.answer} />
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Guarantees Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container-custom">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="flex flex-col items-center">
+              <ShieldCheck className="h-10 w-10 text-green-600 mb-2" />
+              <h4 className="font-semibold text-gray-800">Pago 100% Seguro</h4>
+              <p className="text-sm text-gray-600">Transacciones encriptadas.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <Sparkles className="h-10 w-10 text-caribbean-600 mb-2" />
+              <h4 className="font-semibold text-gray-800">Calidad Garantizada</h4>
+              <p className="text-sm text-gray-600">Las mejores experiencias.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <BadgePercent className="h-10 w-10 text-amber-600 mb-2" />
+              <h4 className="font-semibold text-gray-800">Mejor Precio</h4>
+              <p className="text-sm text-gray-600">Ofertas exclusivas online.</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <h4 className="font-semibold text-gray-800 mb-2">Aceptamos</h4>
+              <div className="flex space-x-2 items-center">
+                <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" className="h-6"/>
+                <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" className="h-6"/>
+                <img src="https://img.icons8.com/color/48/000000/paypal.png" alt="PayPal" className="h-6"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
       <section 
         ref={ctaRef}
         className="py-20 bg-gray-900 text-white"

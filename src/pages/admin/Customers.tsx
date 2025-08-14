@@ -163,8 +163,8 @@ const Customers: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">Visualiza, busca y gestiona la información de tus clientes.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-white rounded-xl shadow-lg p-3 sm:p-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 flex-wrap">
             <div className="w-full sm:w-1/2 lg:w-1/3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -177,7 +177,7 @@ const Customers: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="w-full sm:w-auto flex items-center gap-4">
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
               <div className="relative w-full sm:w-48">
                 <label htmlFor="status-filter" className="sr-only">Filtrar por estado</label>
                 <select 

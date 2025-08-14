@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,7 +11,6 @@ import {
   X,
   LogOut,
   Bell,
-  Search,
   User,
   FileText
 } from 'lucide-react';
@@ -26,6 +25,19 @@ export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   const { auth, logout } = useAuth();
   const { bookings: ctxBookings, activities } = useData();
+
+  // Bloquear scroll del body cuando el sidebar móvil está abierto
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = prev || '';
+    }
+    return () => {
+      document.body.style.overflow = prev || '';
+    };
+  }, [sidebarOpen]);
 
   // --- Notificaciones basadas en reservas reales ---
   const [lastSeenTs, setLastSeenTs] = useState<number>(() => {
@@ -116,7 +128,7 @@ export const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -126,9 +138,13 @@ export const AdminLayout: React.FC = () => {
       )}
 
       {/* Sidebar - Ahora es flex-shrink-0 para mantener su ancho en pantallas grandes */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:relative lg:flex-shrink-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:relative lg:flex-shrink-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } overflow-y-auto`}
+        aria-modal={sidebarOpen ? 'true' : undefined}
+        role="dialog"
+      >
         {/* Sidebar header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -155,7 +171,7 @@ export const AdminLayout: React.FC = () => {
               <NavLink
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                className={`flex items-center gap-3 px-3 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
                   active
                     ? 'bg-caribbean-100 text-caribbean-900 border-r-2 border-caribbean-600'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -195,51 +211,32 @@ export const AdminLayout: React.FC = () => {
       </div>
 
       {/* Main content - Ahora usa flex-1 para ocupar el espacio restante */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14 lg:h-16 px-4 sm:px-6 gap-2 min-w-0">
             {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-gray-600"
+              className="lg:hidden p-2.5 text-gray-400 hover:text-gray-600"
               aria-label="Abrir menú lateral"
               title="Abrir menú lateral"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-6 h-6" />
             </button>
 
-            {/* Search bar */}
-            <div className="w-auto max-w-[200px] sm:flex-1 sm:max-w-lg mx-2 sm:mx-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar actividades, reservas, clientes..."
-                  className="w-full pl-9 pr-3 py-1.5 text-sm sm:py-2 sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-caribbean-500 focus:border-transparent"
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      // En una aplicación real, esto podría filtrar resultados o navegar a una página de búsqueda
-                      console.log('Búsqueda: ', e.currentTarget.value);
-                      alert('Búsqueda: ' + e.currentTarget.value);
-                    }
-                  }}
-                  aria-label="Buscar en el panel"
-                />
-              </div>
-            </div>
 
             {/* Header actions */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 w-auto ml-auto">
               {/* Notifications */}
               <div className="relative">
                 <button 
                   onClick={toggleNotifications}
-                  className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  className="relative p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                   aria-label="Abrir notificaciones"
                   title="Abrir notificaciones"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-6 h-6" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-4 px-1 bg-red-500 text-white text-[10px] leading-4 rounded-full text-center">
                       {unreadCount}
@@ -292,8 +289,8 @@ export const AdminLayout: React.FC = () => {
                 )}
               </div>
 
-              {/* Quick stats */}
-              <div className="hidden lg:flex items-center gap-6 text-sm">
+              {/* Quick stats (icon first, then stats) */}
+              <div className="hidden md:flex items-center gap-6 text-sm">
                 <div className="text-center">
                   <p className="font-semibold text-gray-900">{Array.isArray(activities) ? activities.length : 0}</p>
                   <p className="text-gray-500">Actividades</p>
@@ -389,7 +386,7 @@ export const AdminLayout: React.FC = () => {
         )}
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto min-w-0">
           <Outlet />
         </main>
       </div>
