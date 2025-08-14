@@ -59,10 +59,12 @@ export const getTours = async (filters?: TourFilters): Promise<PaginatedResponse
 /**
  * Obtiene un tour por ID
  */
-export const getTourById = async (id: string): Promise<ApiResponse<Tour>> => {
+export const getTourById = async (id: string): Promise<Tour> => {
   try {
     const response = await api.get(`/activities/${id}`);
-    return response.data;
+    // Desempaqueta si la API envuelve en { data: ... }
+    const payload = response.data as any;
+    return (payload?.data ?? payload) as Tour;
   } catch (error) {
     console.error('Error obteniendo tour por ID:', error);
     return Promise.reject(error);

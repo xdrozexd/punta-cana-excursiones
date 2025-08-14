@@ -702,7 +702,7 @@ const Bookings: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBookings.filter(booking => booking).map((booking, index) => (
+              {filteredBookings.filter(booking => booking).map((booking) => (
                 <tr key={booking.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{booking.id}</div>

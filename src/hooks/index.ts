@@ -391,7 +391,7 @@ export const useGeolocation = () => {
 export const useActivitySync = () => {
   const { activities, refreshData } = useData();
   const lastUpdateRef = useRef<number>(0);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Limpiar intervalo anterior

@@ -1,13 +1,11 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   ArrowLeft, 
-  Save, 
   Eye, 
   EyeOff, 
   Image as ImageIcon,
   Type,
   FileText,
-  Link,
   Calendar
 } from 'lucide-react';
 

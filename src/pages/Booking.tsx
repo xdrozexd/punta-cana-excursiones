@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, Clock, Users, CreditCard, Shield, CheckCircle, Loader, XCircle, MapPin, ChevronLeft, ChevronRight, User, Mail, Phone } from 'lucide-react';
 import { ImageWithFallback } from '../components/ui/ImageWithFallback';
 import { useData } from '../contexts/DataContext';
-import axios from 'axios';
 import { createEducationalBooking, initStripeBooking, getTourById } from '../api';
 import { isEducational, getCurrency } from '../utils/config';
 
@@ -237,8 +236,8 @@ export const Booking: React.FC = () => {
         let activityData = activities.find(act => act.id === tourId);
 
         if (!activityData) {
-          // getTourById is expected to return the tour data directly or throw an error
-          activityData = await getTourById(tourId);
+          // getTourById devuelve un Tour directamente
+          activityData = await getTourById(tourId) as any;
         }
 
         if (activityData) {
